@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -15,9 +14,7 @@ import (
 	"github.com/kubesphere/ksbuilder/pkg/utils"
 )
 
-type unpublishOptions struct {
-	kubeconfig string
-}
+type unpublishOptions struct{}
 
 func defaultUnpublishOptions() *unpublishOptions {
 	return &unpublishOptions{}
@@ -32,19 +29,17 @@ func unpublishExtensionCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE:  o.unpublish,
 	}
-	cmd.Flags().StringVar(&o.kubeconfig, "kubeconfig", "", "kubeconfig file path of the target cluster")
 	return cmd
 }
 
-func (o *unpublishOptions) unpublish(_ *cobra.Command, args []string) error {
+func (o *unpublishOptions) unpublish(cmd *cobra.Command, args []string) error {
 	name := args[0]
 	fmt.Printf("unpublish extension %s\n", name)
 
-	if o.kubeconfig == "" {
-		homeDir, _ := os.UserHomeDir()
-		o.kubeconfig = fmt.Sprintf("%s/.kube/config", homeDir)
-	}
-	genericClient, err := utils.BuildClientFromFlags(o.kubeconfig)
+	flagVal, _ := cmd.Root().PersistentFlags().GetString("kubeconfig")
+	kubeconfigPath := utils.ResolveKubeconfig(flagVal)
+	fmt.Printf("Using kubeconfig: %s\n", kubeconfigPath)
+	genericClient, err := utils.BuildClientFromFlags(kubeconfigPath)
 	if err != nil {
 		return err
 	}
