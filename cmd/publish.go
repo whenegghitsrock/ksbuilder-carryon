@@ -17,8 +17,6 @@ import (
 )
 
 type publishOptions struct {
-	kubeconfig string
-
 	dryRun bool
 	output string
 }
@@ -42,13 +40,12 @@ func publishExtensionCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE:  o.publish,
 	}
-	cmd.Flags().StringVar(&o.kubeconfig, "kubeconfig", "", "kubeconfig file path of the target cluster")
 	cmd.Flags().BoolVar(&o.dryRun, "dryRun", o.dryRun, "generate the local template without applying to the cluster")
 	cmd.Flags().StringVar(&o.output, "output", o.output, "the output path of the local template")
 	return cmd
 }
 
-func (o *publishOptions) publish(_ *cobra.Command, args []string) error {
+func (o *publishOptions) publish(cmd *cobra.Command, args []string) error {
 	// load extension
 	fmt.Printf("publish extension %s\n", args[0])
 	var ext *api.Extension
@@ -91,11 +88,10 @@ func (o *publishOptions) publish(_ *cobra.Command, args []string) error {
 		}
 	} else {
 		fmt.Printf("apply resources to k8s cluster\n")
-		if o.kubeconfig == "" {
-			homeDir, _ := os.UserHomeDir()
-			o.kubeconfig = fmt.Sprintf("%s/.kube/config", homeDir)
-		}
-		genericClient, err := utils.BuildClientFromFlags(o.kubeconfig)
+		flagVal, _ := cmd.Root().PersistentFlags().GetString("kubeconfig")
+		kubeconfigPath := utils.ResolveKubeconfig(flagVal)
+		fmt.Printf("Using kubeconfig: %s\n", kubeconfigPath)
+		genericClient, err := utils.BuildClientFromFlags(kubeconfigPath)
 		if err != nil {
 			return err
 		}
