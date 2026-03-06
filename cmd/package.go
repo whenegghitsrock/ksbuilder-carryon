@@ -7,6 +7,9 @@ import (
 
 	"github.com/otiai10/copy"
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/downloader"
+	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"sigs.k8s.io/yaml"
@@ -15,6 +18,7 @@ import (
 )
 
 type packageOptions struct {
+	skipDependencyUpdate bool
 }
 
 func defaultPackageOptions() *packageOptions {
@@ -30,6 +34,7 @@ func packageExtensionCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE:  o.packageCmd,
 	}
+	cmd.Flags().BoolVar(&o.skipDependencyUpdate, "skip-dependency-update", false, "skip running helm dependency update before packaging")
 	return cmd
 }
 
@@ -69,6 +74,24 @@ func (o *packageOptions) packageCmd(_ *cobra.Command, args []string) error {
 
 	if err = os.WriteFile(tempDir+"/Chart.yaml", chartMetadata, 0644); err != nil {
 		return err
+	}
+
+	if !o.skipDependencyUpdate && len(metadata.Dependencies) > 0 {
+		settings := cli.New()
+		p := getter.All(settings)
+		man := &downloader.Manager{
+			Out:              os.Stdout,
+			ChartPath:        tempDir,
+			Keyring:          "",
+			SkipUpdate:       false,
+			Getters:          p,
+			RepositoryConfig: settings.RepositoryConfig,
+			RepositoryCache:  settings.RepositoryCache,
+			Debug:            settings.Debug,
+		}
+		if err := man.Update(); err != nil {
+			return fmt.Errorf("failed to update chart dependencies: %w\nHint: run 'helm dependency update' in the extension directory, or use --skip-dependency-update", err)
+		}
 	}
 
 	ch, err := loader.LoadDir(tempDir)
