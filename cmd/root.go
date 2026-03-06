@@ -18,6 +18,8 @@ func NewRootCmd(version string) *cobra.Command {
 		},
 	}
 
+	cmd.PersistentFlags().String("kubeconfig", "", "path to the kubeconfig file for cluster access (default: $KUBECONFIG or ~/.kube/config)")
+
 	cmd.AddCommand(versionCmd(version))
 	cmd.AddCommand(categoryCmd(Categories))
 	cmd.AddCommand(createExtensionCmd())
