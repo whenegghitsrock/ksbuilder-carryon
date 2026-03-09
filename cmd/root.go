@@ -31,6 +31,7 @@ func NewRootCmd(version string) *cobra.Command {
 	cmd.AddCommand(validateExtensionCmd())
 	cmd.AddCommand(lintExtensionCmd())
 	cmd.AddCommand(templateExtensionCmd())
+	cmd.AddCommand(doctorCmd(version))
 	cmd.AddCommand(loginCmd())
 	cmd.AddCommand(logoutCmd())
 	cmd.AddCommand(pushCmd())
