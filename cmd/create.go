@@ -27,6 +27,7 @@ type selectPromptContent struct {
 
 type createOptions struct {
 	from string
+	typ  string // standard | app | simple
 }
 
 type Category struct {
@@ -99,6 +100,7 @@ func createExtensionCmd() *cobra.Command {
 		RunE:  o.run,
 	}
 	cmd.Flags().StringVar(&o.from, "from", "", "application helm chart file path of application class")
+	cmd.Flags().StringVar(&o.typ, "type", "standard", "extension type: standard (default), app, or simple. app/simple require --from")
 
 	return cmd
 }
