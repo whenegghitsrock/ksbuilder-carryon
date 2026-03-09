@@ -54,6 +54,12 @@ var Templatessimple embed.FS
 //go:embed templatesapp
 var Templatesapp embed.FS
 
+//go:embed templatesfrontend
+var Templatesfrontend embed.FS
+
+//go:embed templatesbackend
+var Templatesbackend embed.FS
+
 func copyZipFile(srcPath, dstPath string) error {
 	fileName := filepath.Base(srcPath)
 	dstFilePath := filepath.Join(dstPath, fileName)
