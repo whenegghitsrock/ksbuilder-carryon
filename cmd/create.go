@@ -105,7 +105,29 @@ func createExtensionCmd() *cobra.Command {
 	return cmd
 }
 
-func (o *createOptions) run(_ *cobra.Command, _ []string) error {
+func (o *createOptions) run(cmd *cobra.Command, _ []string) error {
+	typ := o.typ
+	if typ == "" {
+		typ = "standard"
+	}
+	switch typ {
+	case "app":
+		if o.from == "" {
+			return fmt.Errorf("--type=app requires --from=<helm chart file>")
+		}
+		return extension.CreateApp(o.from)
+	case "simple":
+		if o.from == "" {
+			return fmt.Errorf("--type=simple requires --from=<helm chart file>")
+		}
+		return extension.CreateSimple(o.from)
+	case "standard":
+		// fall through to existing interactive flow below
+	default:
+		return fmt.Errorf("--type must be standard, app, or simple, got %q", typ)
+	}
+
+	// === 原有 standard 交互逻辑（不变）===
 	extensionNamePrompt := inputPromptContent{
 		text:     "Please input extension name",
 		errorMsg: "Extension name can't be empty",
