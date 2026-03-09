@@ -49,7 +49,7 @@ func Template(args []string, o *options.TemplateOptions, cp string, metadata *ch
 		// As of Helm 2.4.0, this is treated as a stopping condition:
 		// https://github.com/helm/helm/issues/2209
 		if err := action.CheckDependencies(chartRequested, req); err != nil {
-			err = errors.Wrap(err, "An error occurred while checking for chart dependencies. You may need to run `helm dependency build` to fetch missing dependencies")
+			err = errors.Wrap(err, "chart dependencies are missing or outdated")
 			if o.Client.DependencyUpdate {
 				man := &downloader.Manager{
 					Out:              out,
@@ -70,7 +70,7 @@ func Template(args []string, o *options.TemplateOptions, cp string, metadata *ch
 					return nil, errors.Wrap(err, "failed reloading chart after repo update")
 				}
 			} else {
-				return nil, err
+				return nil, fmt.Errorf("%w\nHint: run 'ksbuilder template . --dependency-update' or 'helm dependency update' in the extension directory", err)
 			}
 		}
 	}
