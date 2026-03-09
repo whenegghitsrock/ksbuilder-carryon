@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/otiai10/copy"
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/chartutil"
 	"sigs.k8s.io/yaml"
 
 	"github.com/kubesphere/ksbuilder/pkg/api"
@@ -67,6 +69,14 @@ func (o *packageOptions) packageCmd(_ *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Ensure all dependencies have valid version for helm dependency update.
+	// Local subcharts (no repository) often omit version in extension.yaml; inject from charts/<name>/Chart.yaml.
+	sanitizedDeps, err := sanitizeDependencies(p, metadata.Dependencies)
+	if err != nil {
+		return err
+	}
+	metadata.Dependencies = sanitizedDeps
+
 	chartMetadata, err := yaml.Marshal(metadata.ToChartYaml())
 	if err != nil {
 		return err
@@ -104,4 +114,40 @@ func (o *packageOptions) packageCmd(_ *cobra.Command, args []string) error {
 	}
 	fmt.Printf("package saved to %s\n", chartFilename)
 	return nil
+}
+
+// sanitizeDependencies ensures each dependency has a valid version for helm dependency update.
+// Local subcharts (repository empty) often omit version in extension.yaml; infer from charts/<name>/Chart.yaml.
+// Remote deps without version return an error.
+func sanitizeDependencies(extPath string, deps []*chart.Dependency) ([]*chart.Dependency, error) {
+	if len(deps) == 0 {
+		return deps, nil
+	}
+	result := make([]*chart.Dependency, len(deps))
+	for i, dep := range deps {
+		d := *dep
+		if d.Version != "" {
+			result[i] = &d
+			continue
+		}
+		if d.Repository != "" {
+			return nil, fmt.Errorf("dependency %q in extension.yaml must have 'version' for remote charts (repository is set)\nHint: add version and repository, or use --skip-dependency-update if deps are local only", d.Name)
+		}
+		// Local subchart: try to read version from charts/<name>/Chart.yaml
+		chartPath := filepath.Join(extPath, "charts", d.Name, "Chart.yaml")
+		data, err := os.ReadFile(chartPath)
+		if err == nil {
+			var meta struct {
+				Version string `yaml:"version"`
+			}
+			if err := yaml.Unmarshal(data, &meta); err == nil && meta.Version != "" {
+				d.Version = meta.Version
+				result[i] = &d
+				continue
+			}
+		}
+		d.Version = ">=0.0.0"
+		result[i] = &d
+	}
+	return result, nil
 }
