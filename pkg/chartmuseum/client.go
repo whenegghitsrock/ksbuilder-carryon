@@ -11,13 +11,13 @@ import (
 	"strings"
 )
 
-// UploadResult 上传结果
+// UploadResult holds the result of an upload.
 type UploadResult struct {
 	Saved bool   `json:"saved"`
 	ID    string `json:"id,omitempty"`
 }
 
-// Client chartmuseum HTTP 客户端
+// Client is the ChartMuseum HTTP client.
 type Client struct {
 	BaseURL  string
 	Username string
@@ -25,7 +25,7 @@ type Client struct {
 	Client   *http.Client
 }
 
-// NewClient 创建客户端
+// NewClient creates a new client.
 func NewClient(baseURL, username, password string) *Client {
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	return &Client{
@@ -36,7 +36,7 @@ func NewClient(baseURL, username, password string) *Client {
 	}
 }
 
-// UploadChart 上传 .tgz 到 chartmuseum，POST /api/charts，multipart form chart=@file
+// UploadChart uploads a .tgz to ChartMuseum via POST /api/charts (multipart form chart=@file).
 func (c *Client) UploadChart(tgzPath string) (*UploadResult, error) {
 	f, err := os.Open(tgzPath)
 	if err != nil {
@@ -76,6 +76,6 @@ func (c *Client) UploadChart(tgzPath string) (*UploadResult, error) {
 		return nil, fmt.Errorf("chartmuseum returned %d: %s\nHint: check --username and --password for 401/403, or --repo URL for 404", resp.StatusCode, string(body))
 	}
 
-	// 简化：不解析 JSON，仅判断状态码
+	// Skip JSON parsing; only check status code.
 	return &UploadResult{Saved: true}, nil
 }
