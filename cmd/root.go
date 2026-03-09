@@ -23,8 +23,6 @@ func NewRootCmd(version string) *cobra.Command {
 	cmd.AddCommand(versionCmd(version))
 	cmd.AddCommand(categoryCmd(Categories))
 	cmd.AddCommand(createExtensionCmd())
-	cmd.AddCommand(createSimpleExtensionCmd())
-	cmd.AddCommand(createAppExtensionCmd())
 	cmd.AddCommand(publishExtensionCmd())
 	cmd.AddCommand(packageExtensionCmd())
 	cmd.AddCommand(unpublishExtensionCmd())
