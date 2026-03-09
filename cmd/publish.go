@@ -17,8 +17,12 @@ import (
 )
 
 type publishOptions struct {
-	dryRun bool
-	output string
+	dryRun   bool
+	output   string
+	target   string // cluster (default) | chartmuseum
+	repo     string
+	username string
+	password string
 }
 
 func defaultPublishOptions() *publishOptions {
@@ -42,6 +46,10 @@ func publishExtensionCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&o.dryRun, "dryRun", o.dryRun, "generate the local template without applying to the cluster")
 	cmd.Flags().StringVar(&o.output, "output", o.output, "the output path of the local template")
+	cmd.Flags().StringVar(&o.target, "target", "cluster", "publish target: cluster (apply to k8s) or chartmuseum")
+	cmd.Flags().StringVar(&o.repo, "repo", "", "chartmuseum URL (required when --target=chartmuseum)")
+	cmd.Flags().StringVar(&o.username, "username", "", "basic auth username for chartmuseum")
+	cmd.Flags().StringVar(&o.password, "password", "", "basic auth password for chartmuseum")
 	return cmd
 }
 
