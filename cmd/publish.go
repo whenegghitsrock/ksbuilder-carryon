@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/kubesphere/ksbuilder/pkg/api"
+	"github.com/kubesphere/ksbuilder/pkg/chartmuseum"
 	"github.com/kubesphere/ksbuilder/pkg/extension"
 	"github.com/kubesphere/ksbuilder/pkg/utils"
 )
@@ -54,6 +55,9 @@ func publishExtensionCmd() *cobra.Command {
 }
 
 func (o *publishOptions) publish(cmd *cobra.Command, args []string) error {
+	if o.target == "chartmuseum" {
+		return o.publishToChartmuseum(cmd, args)
+	}
 	// load extension
 	fmt.Printf("publish extension %s\n", args[0])
 	var ext *api.Extension
@@ -111,5 +115,43 @@ func (o *publishOptions) publish(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	return nil
+}
+
+func (o *publishOptions) publishToChartmuseum(_ *cobra.Command, args []string) error {
+	if o.repo == "" {
+		return fmt.Errorf("--target=chartmuseum requires --repo=<chartmuseum URL>\nHint: e.g. --repo=http://localhost:8080")
+	}
+	pwd, _ := os.Getwd()
+	input := args[0]
+	if !path.IsAbs(input) {
+		input = path.Join(pwd, input)
+	}
+
+	var tgzPath string
+	if strings.HasSuffix(input, ".tgz") {
+		if _, err := os.Stat(input); err != nil {
+			return fmt.Errorf("chart file not found: %s", input)
+		}
+		tgzPath = input
+	} else {
+		outDir, err := os.MkdirTemp("", "ksbuilder-publish-")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(outDir)
+		var pkgErr error
+		tgzPath, pkgErr = extension.PackageToPath(input, outDir, false)
+		if pkgErr != nil {
+			return fmt.Errorf("package extension: %w", pkgErr)
+		}
+	}
+
+	client := chartmuseum.NewClient(o.repo, o.username, o.password)
+	_, err := client.UploadChart(tgzPath)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("chart uploaded to %s\n", o.repo)
 	return nil
 }
