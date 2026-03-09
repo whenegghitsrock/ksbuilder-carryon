@@ -17,7 +17,11 @@ func templateExtensionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "template PATH [flags]",
 		Short: "locally render template for an extension",
-		Args:  cobra.ExactArgs(1),
+		Long:  "Render extension chart templates locally. Extensions use extension.yaml instead of Chart.yaml; use this command (not helm template) for debugging.",
+		Example: `  ksbuilder template .                      # render current directory extension
+  ksbuilder template ./my-ext -f values.yaml
+  ksbuilder template . --dependency-update   # auto-fetch deps then render`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			registryClient, err := newRegistryClient(o)
 			if err != nil {
