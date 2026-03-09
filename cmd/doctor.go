@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/kubesphere/ksbuilder/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -78,7 +79,17 @@ func checkKsbuilder(version string) checkResult {
 }
 
 func checkKubeconfig(cmd *cobra.Command) checkResult {
-	return checkResult{ok: true, msg: "kubeconfig (pending)"}
+	flagVal, _ := cmd.Root().PersistentFlags().GetString("kubeconfig")
+	path := utils.ResolveKubeconfig(flagVal)
+	_, err := utils.BuildClientFromFlags(path)
+	if err != nil {
+		return checkResult{
+			ok:   false,
+			msg:  fmt.Sprintf("kubeconfig: %s (%v)", path, err),
+			hint: "check cluster is running and kubeconfig points to correct context",
+		}
+	}
+	return checkResult{ok: true, msg: fmt.Sprintf("kubeconfig: %s (cluster reachable)", path)}
 }
 
 func runDoctor(cmd *cobra.Command, version string) error {
