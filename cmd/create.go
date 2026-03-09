@@ -96,6 +96,7 @@ func createExtensionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new KubeSphere extension",
+		Long:  "Create a new extension. Use --type=standard (default) for interactive creation, --type=app or --type=simple with --from=<chart> for chart-based creation.",
 		Args:  cobra.ExactArgs(0),
 		RunE:  o.run,
 	}
