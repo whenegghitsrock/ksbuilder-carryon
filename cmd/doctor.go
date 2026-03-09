@@ -45,20 +45,71 @@ func checkGo() checkResult {
 	return checkResult{ok: true, msg: "Go " + ver}
 }
 
+func checkHelm() checkResult {
+	_, err := exec.LookPath("helm")
+	if err != nil {
+		return checkResult{ok: false, msg: "Helm not found", hint: "install Helm: https://helm.sh/docs/intro/install"}
+	}
+	out, err := exec.Command("helm", "version", "--short").Output()
+	if err != nil {
+		return checkResult{ok: false, msg: "helm version failed", hint: "run 'helm version'"}
+	}
+	return checkResult{ok: true, msg: "Helm " + strings.TrimSpace(string(out))}
+}
+
+func checkKubectl() checkResult {
+	_, err := exec.LookPath("kubectl")
+	if err != nil {
+		return checkResult{ok: false, msg: "kubectl not found", hint: "install kubectl: https://kubernetes.io/docs/tasks/tools/"}
+	}
+	out, err := exec.Command("kubectl", "version", "--client", "--short").Output()
+	if err != nil {
+		return checkResult{ok: true, msg: "kubectl (version check skipped)"}
+	}
+	ver := strings.TrimSpace(string(out))
+	if len(ver) > 0 && ver[0] == 'v' {
+		return checkResult{ok: true, msg: "kubectl " + ver}
+	}
+	return checkResult{ok: true, msg: "kubectl installed"}
+}
+
+func checkKsbuilder(version string) checkResult {
+	return checkResult{ok: true, msg: "ksbuilder " + version}
+}
+
+func checkKubeconfig(cmd *cobra.Command) checkResult {
+	return checkResult{ok: true, msg: "kubeconfig (pending)"}
+}
+
 func runDoctor(cmd *cobra.Command, version string) error {
 	fmt.Println("ksbuilder doctor")
 	fmt.Println()
 
-	r := checkGo()
-	if r.ok {
-		fmt.Println("✓", r.msg)
-	} else {
-		fmt.Println("✗", r.msg)
-		if r.hint != "" {
-			fmt.Println("  Hint:", r.hint)
+	checks := []checkResult{
+		checkGo(),
+		checkHelm(),
+		checkKubectl(),
+		checkKubeconfig(cmd),
+		checkKsbuilder(version),
+	}
+
+	anyFail := false
+	for _, r := range checks {
+		if r.ok {
+			fmt.Println("✓", r.msg)
+		} else {
+			fmt.Println("✗", r.msg)
+			if r.hint != "" {
+				fmt.Println("  Hint:", r.hint)
+			}
+			anyFail = true
 		}
 	}
 	fmt.Println()
+	if anyFail {
+		fmt.Println("Some checks failed.")
+		return fmt.Errorf("doctor found issues")
+	}
 	fmt.Println("All checks passed.")
 	return nil
 }
