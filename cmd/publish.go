@@ -18,12 +18,14 @@ import (
 )
 
 type publishOptions struct {
-	dryRun   bool
-	output   string
-	target   string // cluster (default) | chartmuseum
-	repo     string
-	username string
-	password string
+	dryRun          bool
+	output          string
+	target          string // cluster (default) | chartmuseum
+	repo            string
+	username        string
+	password        string
+	caBundle        string
+	insecureSkipTLS bool
 }
 
 func defaultPublishOptions() *publishOptions {
@@ -51,6 +53,8 @@ func publishExtensionCmd() *cobra.Command {
 	cmd.Flags().StringVar(&o.repo, "repo", "", "chartmuseum URL (required when --target=chartmuseum)")
 	cmd.Flags().StringVar(&o.username, "username", "", "basic auth username for chartmuseum")
 	cmd.Flags().StringVar(&o.password, "password", "", "basic auth password for chartmuseum")
+	cmd.Flags().StringVar(&o.caBundle, "ca-bundle", "", "path to CA cert file (PEM) for TLS verification")
+	cmd.Flags().BoolVar(&o.insecureSkipTLS, "insecure-skip-tls-verify", false, "skip TLS verification (insecure)")
 	return cmd
 }
 
@@ -147,8 +151,11 @@ func (o *publishOptions) publishToChartmuseum(_ *cobra.Command, args []string) e
 		}
 	}
 
-	client := chartmuseum.NewClient(o.repo, o.username, o.password)
-	_, err := client.UploadChart(tgzPath)
+	client, err := chartmuseum.NewClient(o.repo, o.username, o.password, o.caBundle, o.insecureSkipTLS)
+	if err != nil {
+		return err
+	}
+	_, err = client.UploadChart(tgzPath)
 	if err != nil {
 		return err
 	}
