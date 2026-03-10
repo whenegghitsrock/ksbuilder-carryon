@@ -2,6 +2,8 @@ package chartmuseum
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -25,15 +27,36 @@ type Client struct {
 	Client   *http.Client
 }
 
-// NewClient creates a new client.
-func NewClient(baseURL, username, password string) *Client {
+// NewClient creates a new client. When insecureSkipTLS is true, caBundlePath is ignored.
+// When caBundlePath is non-empty, read PEM and use as RootCAs. Otherwise use system CA.
+func NewClient(baseURL, username, password, caBundlePath string, insecureSkipTLS bool) (*Client, error) {
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	hc := &http.Client{}
+
+	if insecureSkipTLS {
+		hc.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	} else if caBundlePath != "" {
+		pem, err := os.ReadFile(caBundlePath)
+		if err != nil {
+			return nil, fmt.Errorf("read ca-bundle %s: %w\nHint: check --ca-bundle path", caBundlePath, err)
+		}
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(pem) {
+			return nil, fmt.Errorf("no valid PEM certificates in %s\nHint: --ca-bundle must be PEM format", caBundlePath)
+		}
+		hc.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{RootCAs: pool},
+		}
+	}
+
 	return &Client{
 		BaseURL:  baseURL,
 		Username: username,
 		Password: password,
-		Client:   &http.Client{},
-	}
+		Client:   hc,
+	}, nil
 }
 
 // UploadChart uploads a .tgz to ChartMuseum via POST /api/charts (multipart form chart=@file).
@@ -67,7 +90,7 @@ func (c *Client) UploadChart(tgzPath string) (*UploadResult, error) {
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("chartmuseum request failed: %w\nHint: check repo URL and network", err)
+		return nil, fmt.Errorf("chartmuseum request failed: %w\nHint: check repo URL, network; for HTTPS use --ca-bundle or --insecure-skip-tls-verify", err)
 	}
 	defer resp.Body.Close()
 
