@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"embed"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubesphere/ksbuilder/pkg/extension"
+	"github.com/kubesphere/ksbuilder/pkg/extension/spec"
 )
 
 type inputPromptContent struct {
@@ -90,6 +90,18 @@ func getCategoryDisplayNames(categories []Category) []string {
 		names = append(names, c.DisplayNameEN)
 	}
 	return names
+}
+
+// overlayTypeFromTemplateIndex maps templateTypeIdx (0=standard, 1=frontend, 2=backend) to a label.
+func overlayTypeFromTemplateIndex(idx int) string {
+	switch idx {
+	case 1:
+		return "frontend"
+	case 2:
+		return "backend"
+	default:
+		return "standard"
+	}
 }
 
 func createExtensionCmd() *cobra.Command {
@@ -202,31 +214,38 @@ func (o *createOptions) run(c *cobra.Command, _ []string) error {
 	}
 	url := promptGetInput(urlPrompt)
 
-	extensionConfig := extension.Config{
-		Name:     name,
-		Category: Categories[categoryIdx].NormalizedName,
-		Author:   author,
-		Email:    email,
-		URL:      url,
-	}
-
 	pwd, _ := os.Getwd()
 	p := path.Join(pwd, name)
 
-	var templateFS embed.FS
-	var templatePrefix string
+	// Build declarative spec from prompts
+	extSpec := &spec.Spec{
+		Name:         name,
+		Version:      "0.1.0",
+		Mode:         spec.ModeStandard,
+		Capabilities: spec.Capabilities{},
+		Metadata: spec.Metadata{
+			DisplayName: map[string]string{"zh": name, "en": name},
+			Description: map[string]string{
+				"zh": "这是一个示例扩展组件，这是它的描述",
+				"en": "This is a sample extension, and this is its description",
+			},
+			Category: Categories[categoryIdx].NormalizedName,
+			Keywords: []string{name, Categories[categoryIdx].NormalizedName},
+			Author:    author,
+			Email:     email,
+			URL:       url,
+		},
+		Permissions: spec.PermDefault,
+	}
 	switch o.templateTypeIdx {
 	case 1:
-		templateFS = extension.Templatesfrontend
-		templatePrefix = "templatesfrontend"
+		extSpec.Capabilities = spec.Capabilities{Frontend: true, Backend: false}
 	case 2:
-		templateFS = extension.Templatesbackend
-		templatePrefix = "templatesbackend"
+		extSpec.Capabilities = spec.Capabilities{Frontend: false, Backend: true}
 	default:
-		templateFS = extension.Templates
-		templatePrefix = "templates"
+		extSpec.Capabilities = spec.Capabilities{Frontend: true, Backend: true}
 	}
-	if err := extension.Create(p, extensionConfig, templateFS, templatePrefix); err != nil {
+	if err := extension.CreateFromSpec(p, extSpec); err != nil {
 		return err
 	}
 
@@ -243,6 +262,7 @@ func (o *createOptions) run(c *cobra.Command, _ []string) error {
 
 	fmt.Printf("Directory: %s\n\n", p)
 	fmt.Println("The extension charts has been created.")
+	fmt.Println(createSuccessHint(true, extSpec.HasFrontend(), extSpec.HasBackend()))
 
 	return nil
 }
