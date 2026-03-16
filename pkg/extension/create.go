@@ -22,6 +22,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/kubesphere/ksbuilder/pkg/api"
+	"github.com/kubesphere/ksbuilder/pkg/extension/generator"
+	"github.com/kubesphere/ksbuilder/pkg/extension/spec"
 )
 
 type Config struct {
@@ -53,12 +55,6 @@ var Templatessimple embed.FS
 
 //go:embed templatesapp
 var Templatesapp embed.FS
-
-//go:embed templatesfrontend
-var Templatesfrontend embed.FS
-
-//go:embed templatesbackend
-var Templatesbackend embed.FS
 
 func copyZipFile(srcPath, dstPath string) error {
 	fileName := filepath.Base(srcPath)
@@ -192,6 +188,185 @@ func Create(p string, config any, temp embed.FS, trimPrefix string) error {
 		}
 		defer f.Close() // nolint
 		return t.Execute(f, config)
+	})
+}
+
+// CreateFromSpec creates an extension from a declarative spec (standard mode).
+func CreateFromSpec(root string, s *spec.Spec) error {
+	if s.Mode != spec.ModeStandard {
+		return fmt.Errorf("CreateFromSpec only supports mode=standard, got %s", s.Mode)
+	}
+	if !s.HasFrontend() && !s.HasBackend() {
+		return fmt.Errorf("at least one of frontend or backend must be enabled")
+	}
+	if err := os.MkdirAll(root, 0755); err != nil {
+		return err
+	}
+	config := struct {
+		Name        string
+		HasFrontend bool
+		HasBackend  bool
+	}{Name: s.Name, HasFrontend: s.HasFrontend(), HasBackend: s.HasBackend()}
+
+	if err := s.Write(root); err != nil {
+		return err
+	}
+	extYAML, err := generator.ExtensionYAML(s)
+	if err != nil {
+		return fmt.Errorf("generate extension.yaml: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "extension.yaml"), extYAML, 0644); err != nil {
+		return err
+	}
+	permYAML, err := generator.PermissionsYAML(s)
+	if err != nil {
+		return fmt.Errorf("generate permissions.yaml: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "permissions.yaml"), permYAML, 0644); err != nil {
+		return err
+	}
+	valsYAML, err := generator.ValuesYAML(s)
+	if err != nil {
+		return fmt.Errorf("generate values.yaml: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "values.yaml"), valsYAML, 0644); err != nil {
+		return err
+	}
+	if s.HasFrontend() {
+		if err := copySubtree(Templates, "templates/charts/frontend", filepath.Join(root, "charts", "frontend"), config); err != nil {
+			return fmt.Errorf("copy frontend chart: %w", err)
+		}
+	}
+	if s.HasBackend() {
+		if err := copySubtree(Templates, "templates/charts/backend", filepath.Join(root, "charts", "backend"), config); err != nil {
+			return fmt.Errorf("copy backend chart: %w", err)
+		}
+	}
+	if err := copySubtree(Templates, "templates/static", filepath.Join(root, "static"), config); err != nil {
+		return fmt.Errorf("copy static: %w", err)
+	}
+	if s.HasFrontend() {
+		if err := copySubtree(Templates, "templates/frontend", filepath.Join(root, "frontend"), config); err != nil {
+			return fmt.Errorf("copy frontend scaffold: %w", err)
+		}
+	}
+	if s.HasBackend() {
+		if err := copySubtreeWithRename(Templates, "templates/backend", filepath.Join(root, "backend"), config, map[string]string{"go.mod.tpl": "go.mod"}); err != nil {
+			return fmt.Errorf("copy backend scaffold: %w", err)
+		}
+	}
+	if s.HasFrontend() || s.HasBackend() {
+		makefile, err := fs.ReadFile(Templates, "templates/Makefile")
+		if err != nil {
+			return fmt.Errorf("read Makefile template: %w", err)
+		}
+		t, err := template.New("Makefile").Delims("[[", "]]").Parse(string(makefile))
+		if err != nil {
+			return fmt.Errorf("parse Makefile template: %w", err)
+		}
+		var buf bytes.Buffer
+		if err := t.Execute(&buf, config); err != nil {
+			return fmt.Errorf("render Makefile: %w", err)
+		}
+		if err := os.WriteFile(filepath.Join(root, "Makefile"), buf.Bytes(), 0644); err != nil {
+			return fmt.Errorf("write Makefile: %w", err)
+		}
+	}
+	for _, name := range []string{"README.md", "README_zh.md", "CHANGELOG.md", "CHANGELOG_zh.md", ".helmignore"} {
+		data, err := fs.ReadFile(Templates, "templates/"+name)
+		if err != nil {
+			continue
+		}
+		t, err := template.New(name).Delims("[[", "]]").Parse(string(data))
+		if err != nil {
+			return err
+		}
+		var buf bytes.Buffer
+		if err := t.Execute(&buf, config); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(root, name), buf.Bytes(), 0644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func copySubtree(f embed.FS, srcPrefix, destDir string, config any) error {
+	return fs.WalkDir(f, srcPrefix, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := strings.CutPrefix(p, srcPrefix+"/")
+		if rel == "" {
+			if d.IsDir() {
+				return os.MkdirAll(destDir, 0755)
+			}
+			return nil
+		}
+		dstPath := filepath.Join(destDir, rel)
+		if d.IsDir() {
+			return os.MkdirAll(dstPath, 0755)
+		}
+		data, err := fs.ReadFile(f, p)
+		if err != nil {
+			return err
+		}
+		t, err := template.New(filepath.Base(p)).Delims("[[", "]]").Parse(string(data))
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			return err
+		}
+		out, err := os.Create(dstPath)
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+		return t.Execute(out, config)
+	})
+}
+
+func copySubtreeWithRename(f embed.FS, srcPrefix, destDir string, config any, renames map[string]string) error {
+	return fs.WalkDir(f, srcPrefix, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := strings.CutPrefix(p, srcPrefix+"/")
+		if rel == "" {
+			if d.IsDir() {
+				return os.MkdirAll(destDir, 0755)
+			}
+			return nil
+		}
+		dstRel := rel
+		if renames != nil {
+			if newName, ok := renames[filepath.Base(rel)]; ok {
+				dstRel = filepath.Join(filepath.Dir(rel), newName)
+			}
+		}
+		dstPath := filepath.Join(destDir, dstRel)
+		if d.IsDir() {
+			return os.MkdirAll(dstPath, 0755)
+		}
+		data, err := fs.ReadFile(f, p)
+		if err != nil {
+			return err
+		}
+		t, err := template.New(filepath.Base(p)).Delims("[[", "]]").Parse(string(data))
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			return err
+		}
+		out, err := os.Create(dstPath)
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+		return t.Execute(out, config)
 	})
 }
 
