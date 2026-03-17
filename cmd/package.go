@@ -44,5 +44,6 @@ func (o *packageOptions) packageCmd(_ *cobra.Command, args []string) error {
 		return err
 	}
 	fmt.Printf("package saved to %s\n", chartFilename)
+	fmt.Println(packageSuccessHint())
 	return nil
 }

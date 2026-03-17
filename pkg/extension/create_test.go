@@ -135,6 +135,7 @@ func verifyFiles(t *testing.T, root string, wantFrontend, wantBackend bool) {
 	t.Helper()
 	required := []string{
 		".ksbuilder.yaml",
+		".helmignore",
 		"extension.yaml",
 		"permissions.yaml",
 		"values.yaml",
@@ -154,6 +155,9 @@ func verifyFiles(t *testing.T, root string, wantFrontend, wantBackend bool) {
 		if _, err := os.Stat(filepath.Join(root, "frontend", "Dockerfile")); err != nil {
 			t.Errorf("missing frontend scaffold: %v", err)
 		}
+		if _, err := os.Stat(filepath.Join(root, "frontend", "templates")); err == nil {
+			t.Error("frontend/templates should not exist (Helm templates are in charts/frontend/templates)")
+		}
 	}
 	if wantBackend {
 		if _, err := os.Stat(filepath.Join(root, "charts", "backend", "Chart.yaml")); err != nil {
@@ -161,6 +165,9 @@ func verifyFiles(t *testing.T, root string, wantFrontend, wantBackend bool) {
 		}
 		if _, err := os.Stat(filepath.Join(root, "backend", "Dockerfile")); err != nil {
 			t.Errorf("missing backend scaffold: %v", err)
+		}
+		if _, err := os.Stat(filepath.Join(root, "backend", "templates")); err == nil {
+			t.Error("backend/templates should not exist (Helm templates are in charts/backend/templates)")
 		}
 	}
 	if wantFrontend || wantBackend {

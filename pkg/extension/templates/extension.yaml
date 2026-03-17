@@ -2,13 +2,14 @@ apiVersion: kubesphere.io/v1alpha1
 name: [[ .Name ]]
 version: 0.1.0
 displayName:
-  zh: 示例扩展组件
-  en: Sample Extension
+  zh: [[ .Name ]]
+  en: [[ .Name ]]
 description:
   zh: 这是一个示例扩展组件，这是它的描述
   en: This is a sample extension, and this is its description
 category: [[ .Category ]]
 keywords:
+  - [[ .Name ]]
   - [[ .Category ]]
 home: https://kubesphere.io
 sources:

@@ -117,6 +117,7 @@ func (o *publishOptions) publish(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		}
+		fmt.Println(publishClusterSuccessHint())
 	}
 
 	return nil
@@ -160,5 +161,6 @@ func (o *publishOptions) publishToChartmuseum(_ *cobra.Command, args []string) e
 		return err
 	}
 	fmt.Printf("chart uploaded to %s\n", o.repo)
+	fmt.Println(publishChartmuseumSuccessHint())
 	return nil
 }

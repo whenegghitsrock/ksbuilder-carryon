@@ -47,7 +47,7 @@ type ConfigApp struct {
 	ZipName        string
 }
 
-//go:embed templates
+//go:embed templates templates/.helmignore
 var Templates embed.FS
 
 //go:embed templatessimple
@@ -297,11 +297,14 @@ func copySubtree(f embed.FS, srcPrefix, destDir string, config any) error {
 		if err != nil {
 			return err
 		}
-		rel, _ := strings.CutPrefix(p, srcPrefix+"/")
-		if rel == "" {
+		if p == srcPrefix {
 			if d.IsDir() {
 				return os.MkdirAll(destDir, 0755)
 			}
+			return nil
+		}
+		rel, _ := strings.CutPrefix(p, srcPrefix+"/")
+		if rel == "" {
 			return nil
 		}
 		dstPath := filepath.Join(destDir, rel)
@@ -333,11 +336,14 @@ func copySubtreeWithRename(f embed.FS, srcPrefix, destDir string, config any, re
 		if err != nil {
 			return err
 		}
-		rel, _ := strings.CutPrefix(p, srcPrefix+"/")
-		if rel == "" {
+		if p == srcPrefix {
 			if d.IsDir() {
 				return os.MkdirAll(destDir, 0755)
 			}
+			return nil
+		}
+		rel, _ := strings.CutPrefix(p, srcPrefix+"/")
+		if rel == "" {
 			return nil
 		}
 		dstRel := rel

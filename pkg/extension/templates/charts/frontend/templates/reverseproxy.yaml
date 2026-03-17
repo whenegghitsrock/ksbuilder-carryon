@@ -1,0 +1,17 @@
+apiVersion: extensions.kubesphere.io/v1alpha1
+kind: ReverseProxy
+metadata:
+  name: extension-{{ .Release.Name }}-ks-console-v3-static-files
+  labels:
+    kubesphere.io/reverse-proxy-target: ks-console
+spec:
+  directives:
+    stripPathPrefix: /proxy/{{ .Release.Name }}
+  matcher:
+    method: '*'
+    path: '/proxy/{{ .Release.Name }}/*'
+  upstream:
+    insecureSkipVerify: false
+    url: http://{{ include "frontend.fullname" . }}.{{ .Release.Namespace }}.svc
+status:
+  state: Available

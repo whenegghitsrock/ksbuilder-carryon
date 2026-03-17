@@ -1,5 +1,6 @@
 REGISTRY ?= docker.io
-NAMESPACE ?= myorg
+NAMESPACE ?= kubespheredev
+TAG ?= latest
 EXT_NAME ?= [[ .Name ]]
 
 .PHONY: build build-frontend build-backend push push-frontend push-backend

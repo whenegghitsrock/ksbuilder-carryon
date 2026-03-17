@@ -1,0 +1,15 @@
+# ExtensionEntry defines the frontend mount point in KubeSphere console.
+# See: https://dev-guide.kubesphere.io/extension-dev-guide/en/feature-customization/menu/
+apiVersion: extensions.kubesphere.io/v1alpha1
+kind: ExtensionEntry
+metadata:
+  name: {{ include "frontend.fullname" . }}-extension-entries
+spec:
+  entries:
+    - parent: {{ .Values.extParent | default "global" }}
+      name: {{ .Values.extName | default .Release.Name }}
+      link: /{{ .Values.extName | default .Release.Name }}
+      title: {{ .Values.extTitle | default .Release.Name }}
+      icon: {{ .Values.extIcon | default "cluster" }}
+      order: {{ .Values.extOrder | default 0 }}
+      skipAuth: {{ .Values.extSkipAuth | default true }}

@@ -21,3 +21,9 @@
 .idea/
 *.tmproj
 .vscode/
+# Development/build files (not needed at deploy time)
+Makefile
+.ksbuilder.yaml
+# Source scaffolds - leading / excludes only root-level, not charts/frontend and charts/backend
+/frontend/
+/backend/

@@ -1,8 +1,9 @@
 REGISTRY ?= docker.io
-NAMESPACE ?= myorg
+NAMESPACE ?= kubespheredev
 NAME ?= [[ .Name ]]
-IMAGE ?= $(REGISTRY)/$(NAMESPACE)/$(NAME)-api
 TAG ?= latest
+TAG := $(or $(TAG),latest)
+IMAGE ?= $(REGISTRY)/$(NAMESPACE)/$(NAME)-api
 
 build:
 	go mod tidy

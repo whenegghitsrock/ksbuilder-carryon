@@ -1,5 +1,0 @@
-frontend:
-  enabled: true
-  image:
-    repository: kubespheredev/[[ .Name ]]-frontend
-    tag: latest

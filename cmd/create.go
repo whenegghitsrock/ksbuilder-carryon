@@ -262,7 +262,7 @@ func (o *createOptions) run(c *cobra.Command, _ []string) error {
 
 	fmt.Printf("Directory: %s\n\n", p)
 	fmt.Println("The extension charts has been created.")
-	fmt.Println(createSuccessHint(true, extSpec.HasFrontend(), extSpec.HasBackend()))
+	fmt.Println(createSuccessHint(true, extSpec.HasFrontend(), extSpec.HasBackend(), name))
 
 	return nil
 }

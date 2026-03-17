@@ -27,14 +27,21 @@ func TestCreateStandardTemplateTypeMapping(t *testing.T) {
 }
 
 func TestCreateSuccessHintTextStable(t *testing.T) {
-	hint := createSuccessHint(false, false, false)
+	hint := createSuccessHint(false, false, false, "")
 	if !strings.Contains(hint, "ksbuilder package .") {
 		t.Fatalf("create success hint should mention packaging command, got %q", hint)
 	}
 }
 
+func TestCreateSuccessHintIncludesCdStep(t *testing.T) {
+	hint := createSuccessHint(true, true, true, "my-extension")
+	if !strings.Contains(hint, "cd my-extension") {
+		t.Fatalf("create success hint should mention cd step, got %q", hint)
+	}
+}
+
 func TestCreateSuccessHintStandardMode(t *testing.T) {
-	hint := createSuccessHint(true, true, true)
+	hint := createSuccessHint(true, true, true, "my-extension")
 	if !strings.Contains(hint, "make build-frontend build-backend") {
 		t.Errorf("standard mode hint should mention make build: %q", hint)
 	}

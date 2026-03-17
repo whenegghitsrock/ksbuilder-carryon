@@ -2,18 +2,22 @@ package cmd
 
 import "strings"
 
-func createSuccessHint(standardMode bool, hasFrontend, hasBackend bool) string {
+func createSuccessHint(standardMode bool, hasFrontend, hasBackend bool, extName string) string {
 	var b strings.Builder
 	b.WriteString("Next steps:\n")
 	if standardMode && (hasFrontend || hasBackend) {
-		b.WriteString("  1. Build images:  make build-frontend build-backend\n")
-		b.WriteString("  2. Push: make push (set REGISTRY, NAMESPACE)\n")
-		b.WriteString("  3. Update values.yaml with your image repository.\n")
-		b.WriteString("  4. Package:  ksbuilder package .\n")
-		b.WriteString("  5. Publish: ksbuilder publish . --target=cluster\n")
+		b.WriteString("  1. cd " + extName + "\n")
+		b.WriteString("  2. make build-frontend build-backend\n")
+		b.WriteString("     (or: REGISTRY=myreg NAMESPACE=myns make build-frontend build-backend)\n")
+		b.WriteString("  3. make push\n")
+		b.WriteString("     (or: REGISTRY=myreg NAMESPACE=myns make push)\n")
+		b.WriteString("  4. Edit values.yaml: set frontend/backend image.repository\n")
+		b.WriteString("  5. ksbuilder package .\n")
+		b.WriteString("  6. ksbuilder publish . --target=cluster\n")
 		if hasFrontend {
 			b.WriteString("\nFor KubeSphere Console-style frontend (React, yarn dev):\n")
-			b.WriteString("  yarn create ks-project <project-name> && cd <project-name> && yarn create:ext\n")
+			b.WriteString("  cd " + extName + " && mv frontend frontend-simple && yarn create ks-project frontend && cd frontend && yarn create:ext\n")
+			b.WriteString("  (Console project in " + extName + "/frontend/, extension in frontend/extensions/. Run yarn dev from frontend/.)\n")
 		}
 		return b.String()
 	}
