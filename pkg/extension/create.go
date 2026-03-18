@@ -378,7 +378,7 @@ func copySubtree(f embed.FS, srcPrefix, destDir string, config any) error {
 		if err != nil {
 			return err
 		}
-		defer out.Close()
+		defer func() { _ = out.Close() }()
 		return t.Execute(out, config)
 	})
 }
@@ -423,7 +423,7 @@ func copySubtreeWithRename(f embed.FS, srcPrefix, destDir string, config any, re
 		if err != nil {
 			return err
 		}
-		defer out.Close()
+		defer func() { _ = out.Close() }()
 		return t.Execute(out, config)
 	})
 }

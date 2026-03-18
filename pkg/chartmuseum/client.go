@@ -65,7 +65,7 @@ func (c *Client) UploadChart(tgzPath string) (*UploadResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open chart file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
@@ -92,7 +92,7 @@ func (c *Client) UploadChart(tgzPath string) (*UploadResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("chartmuseum request failed: %w\nHint: check repo URL, network; for HTTPS use --ca-bundle or --insecure-skip-tls-verify", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {

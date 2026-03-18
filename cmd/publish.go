@@ -144,7 +144,7 @@ func (o *publishOptions) publishToChartmuseum(_ *cobra.Command, args []string) e
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(outDir)
+		defer func() { _ = os.RemoveAll(outDir) }()
 		var pkgErr error
 		tgzPath, pkgErr = extension.PackageToPath(input, outDir, false)
 		if pkgErr != nil {

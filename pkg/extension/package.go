@@ -38,7 +38,7 @@ func PackageToPath(extPath, outputDir string, skipDependencyUpdate bool) (string
 	if err != nil {
 		return "", err
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	if err = copy.Copy(extPath, tempDir, opt); err != nil {
 		return "", err
