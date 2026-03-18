@@ -129,7 +129,17 @@ func CreateApp(chartPath string) error {
 	}
 
 	err = Create(root, extensionConfig, Templatesapp, "templatesapp")
-	return err
+	if err != nil {
+		return err
+	}
+	extYAML, err := generator.ExtensionYAMLForChartMode(chartPack.Name())
+	if err != nil {
+		return fmt.Errorf("generate extension.yaml: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "extension.yaml"), extYAML, 0644); err != nil {
+		return err
+	}
+	return nil
 }
 
 func CreateSimple(chartPath string) error {
@@ -160,7 +170,17 @@ func CreateSimple(chartPath string) error {
 		Name: chartPack.Name(),
 	}
 	err = Create(root, extensionConfig, Templatessimple, "templatessimple")
-	return err
+	if err != nil {
+		return err
+	}
+	extYAML, err := generator.ExtensionYAMLForChartMode(chartPack.Name())
+	if err != nil {
+		return fmt.Errorf("generate extension.yaml: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "extension.yaml"), extYAML, 0644); err != nil {
+		return err
+	}
+	return nil
 }
 
 func Create(p string, config any, temp embed.FS, trimPrefix string) error {
