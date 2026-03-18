@@ -132,6 +132,9 @@ func CreateApp(chartPath string) error {
 	if err != nil {
 		return err
 	}
+	if err := copySharedFromTemplates(root, extensionConfig); err != nil {
+		return fmt.Errorf("copy shared templates: %w", err)
+	}
 	extYAML, err := generator.ExtensionYAMLForChartMode(chartPack.Name())
 	if err != nil {
 		return fmt.Errorf("generate extension.yaml: %w", err)
@@ -172,6 +175,9 @@ func CreateSimple(chartPath string) error {
 	err = Create(root, extensionConfig, Templatessimple, "templatessimple")
 	if err != nil {
 		return err
+	}
+	if err := copySharedFromTemplates(root, extensionConfig); err != nil {
+		return fmt.Errorf("copy shared templates: %w", err)
 	}
 	extYAML, err := generator.ExtensionYAMLForChartMode(chartPack.Name())
 	if err != nil {
@@ -291,6 +297,32 @@ func CreateFromSpec(root string, s *spec.Spec) error {
 		if err := os.WriteFile(filepath.Join(root, "Makefile"), buf.Bytes(), 0644); err != nil {
 			return fmt.Errorf("write Makefile: %w", err)
 		}
+	}
+	for _, name := range []string{"README.md", "README_zh.md", "CHANGELOG.md", "CHANGELOG_zh.md", ".helmignore"} {
+		data, err := fs.ReadFile(Templates, "templates/"+name)
+		if err != nil {
+			continue
+		}
+		t, err := template.New(name).Delims("[[", "]]").Parse(string(data))
+		if err != nil {
+			return err
+		}
+		var buf bytes.Buffer
+		if err := t.Execute(&buf, config); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(root, name), buf.Bytes(), 0644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// copySharedFromTemplates copies static/, README*, CHANGELOG*, .helmignore from templates to root.
+// Used by CreateApp and CreateSimple to avoid duplicating these files in templatesapp/templatessimple.
+func copySharedFromTemplates(root string, config any) error {
+	if err := copySubtree(Templates, "templates/static", filepath.Join(root, "static"), config); err != nil {
+		return err
 	}
 	for _, name := range []string{"README.md", "README_zh.md", "CHANGELOG.md", "CHANGELOG_zh.md", ".helmignore"} {
 		data, err := fs.ReadFile(Templates, "templates/"+name)
