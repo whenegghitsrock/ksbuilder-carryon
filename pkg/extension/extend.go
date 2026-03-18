@@ -131,6 +131,28 @@ func extendSetValuesSection(root, section, repoSuffix, name string) error {
 	return os.WriteFile(valsPath, valsOut, 0644)
 }
 
+type extendConfig struct {
+	Name        string
+	HasFrontend bool
+	HasBackend  bool
+}
+
+func extendWriteMakefile(root string, config extendConfig) error {
+	makefile, err := fs.ReadFile(Templates, "templates/Makefile")
+	if err != nil {
+		return err
+	}
+	t, err := template.New("Makefile").Delims("[[", "]]").Parse(string(makefile))
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, config); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(root, "Makefile"), buf.Bytes(), 0644)
+}
+
 // ExtendAddBackend adds backend capability to an existing frontend-only extension.
 // root must contain extension.yaml, values.yaml, charts/frontend.
 func ExtendAddBackend(root string) error {
