@@ -62,14 +62,8 @@ func extendEnsureBothDeps(root string) error {
 	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return err
 	}
-	// Check if both deps present (handle dependencies or Dependencies key)
-	var deps []interface{}
-	if v, ok := raw["dependencies"]; ok {
-		deps, _ = v.([]interface{})
-	}
-	if v, ok := raw["Dependencies"]; ok {
-		deps, _ = v.([]interface{})
-	}
+	// Check if both deps present
+	deps, _ := raw["dependencies"].([]interface{})
 	hasFrontend, hasBackend := false, false
 	for _, d := range deps {
 		m, _ := d.(map[string]interface{})
@@ -87,7 +81,6 @@ func extendEnsureBothDeps(root string) error {
 		{"name": "frontend", "tags": []string{"extension"}},
 		{"name": "backend", "tags": []string{"agent"}},
 	}
-	delete(raw, "Dependencies")
 	raw["dependencies"] = newDeps
 	out, err := yaml.Marshal(raw)
 	if err != nil {
