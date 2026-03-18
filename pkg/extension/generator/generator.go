@@ -59,24 +59,25 @@ func ExtensionYAML(s *spec.Spec) ([]byte, error) {
 		})
 	}
 
+	// sigs.k8s.io/yaml uses json tags (not yaml tags) for marshaling; use json tags for lowercase keys
 	type extMeta struct {
-		APIVersion       string                 `yaml:"apiVersion"`
-		Name             string                 `yaml:"name"`
-		Version          string                 `yaml:"version"`
-		DisplayName      map[string]string      `yaml:"displayName"`
-		Description      map[string]string      `yaml:"description"`
-		Category         string                 `yaml:"category"`
-		Keywords         []string               `yaml:"keywords"`
-		Home             string                 `yaml:"home"`
-		Sources          []string               `yaml:"sources"`
-		KubeVersion      string                 `yaml:"kubeVersion"`
-		KSVersion        string                 `yaml:"ksVersion"`
-		Maintainers      []*chart.Maintainer    `yaml:"maintainers"`
-		Provider         map[string]interface{} `yaml:"provider"`
-		Icon             string                 `yaml:"icon"`
-		Screenshots      []string               `yaml:"screenshots"`
-		Dependencies     []*chart.Dependency    `yaml:"dependencies"`
-		InstallationMode string                 `yaml:"installationMode"`
+		APIVersion       string                 `json:"apiVersion"`
+		Name             string                 `json:"name"`
+		Version          string                 `json:"version"`
+		DisplayName      map[string]string      `json:"displayName"`
+		Description      map[string]string      `json:"description"`
+		Category         string                 `json:"category"`
+		Keywords         []string               `json:"keywords"`
+		Home             string                 `json:"home"`
+		Sources          []string               `json:"sources"`
+		KubeVersion      string                 `json:"kubeVersion"`
+		KSVersion        string                 `json:"ksVersion"`
+		Maintainers      []*chart.Maintainer    `json:"maintainers"`
+		Provider         map[string]interface{} `json:"provider"`
+		Icon             string                 `json:"icon"`
+		Screenshots      []string               `json:"screenshots"`
+		Dependencies     []*chart.Dependency    `json:"dependencies"`
+		InstallationMode string                 `json:"installationMode"`
 	}
 
 	m := extMeta{

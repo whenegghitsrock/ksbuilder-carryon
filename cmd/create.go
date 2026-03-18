@@ -30,6 +30,7 @@ type createOptions struct {
 	from            string
 	typ             string // standard | app | simple
 	templateTypeIdx int    // 0=standard, 1=frontend, 2=backend (set by prompt when from scratch)
+	extend          bool   // force extend mode, fail if no extension.yaml
 }
 
 type Category struct {
@@ -116,11 +117,62 @@ func createExtensionCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&o.from, "from", "", "application helm chart file path of application class")
 	cmd.Flags().StringVar(&o.typ, "type", "standard", "extension type: standard (default), app, or simple. app/simple require --from")
+	cmd.Flags().BoolVar(&o.extend, "extend", false, "force extend mode; fail if no extension.yaml in current dir")
 
 	return cmd
 }
 
 func (o *createOptions) run(c *cobra.Command, _ []string) error {
+	// Extend mode: if extension.yaml exists in current dir, offer to add capabilities
+	// Must run before any interactive prompts so users in existing extension dirs get extend options
+	pwd, _ := os.Getwd()
+	cap, err := extension.InferCapabilities(pwd)
+	if err != nil {
+		return fmt.Errorf("check existing extension: %w", err)
+	}
+	if o.extend && cap == nil {
+		return fmt.Errorf("--extend: no extension.yaml in current dir or not extendable (need frontend/backend deps)")
+	}
+	if cap != nil {
+		var items []string
+		if !cap.HasBackend {
+			items = append(items, "Add Backend")
+		}
+		if !cap.HasFrontend {
+			items = append(items, "Add Frontend")
+		}
+		if len(items) == 0 {
+			fmt.Printf("Extension %q already has frontend and backend. Nothing to add.\n", cap.Name)
+			return nil
+		}
+		items = append(items, "Skip (exit)")
+		prompt := selectPromptContent{
+			text:  fmt.Sprintf("Detected extension %q with Frontend: %v, Backend: %v. Add missing capabilities?", cap.Name, cap.HasFrontend, cap.HasBackend),
+			items: items,
+		}
+		idx := promptGetSelect(prompt)
+		if idx == len(items)-1 {
+			return nil // Skip
+		}
+		switch items[idx] {
+		case "Add Backend":
+			if err := extension.ExtendAddBackend(pwd); err != nil {
+				return err
+			}
+			fmt.Println("Backend added.")
+			fmt.Println(createSuccessHint(true, true, true, cap.Name))
+			return nil
+		case "Add Frontend":
+			if err := extension.ExtendAddFrontend(pwd); err != nil {
+				return err
+			}
+			fmt.Println("Frontend added.")
+			fmt.Println(createSuccessHint(true, true, true, cap.Name))
+			return nil
+		}
+		return nil
+	}
+
 	typ := o.typ
 	if typ == "" {
 		typ = "standard"
@@ -214,7 +266,6 @@ func (o *createOptions) run(c *cobra.Command, _ []string) error {
 	}
 	url := promptGetInput(urlPrompt)
 
-	pwd, _ := os.Getwd()
 	p := path.Join(pwd, name)
 
 	// Build declarative spec from prompts

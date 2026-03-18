@@ -3,6 +3,7 @@ package extension
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/kubesphere/ksbuilder/pkg/extension/spec"
@@ -48,6 +49,19 @@ func TestCreateFromSpec_FrontendOnly(t *testing.T) {
 
 	if err := CreateFromSpec(root, s); err != nil {
 		t.Fatalf("CreateFromSpec: %v", err)
+	}
+
+	// extension.yaml should use lowercase keys (apiVersion, not APIVersion) per template style
+	extYAML, err := os.ReadFile(filepath.Join(root, "extension.yaml"))
+	if err != nil {
+		t.Fatalf("read extension.yaml: %v", err)
+	}
+	extStr := string(extYAML)
+	if !strings.Contains(extStr, "apiVersion:") {
+		t.Error("extension.yaml should contain apiVersion: (lowercase)")
+	}
+	if strings.Contains(extStr, "APIVersion:") {
+		t.Error("extension.yaml should not contain APIVersion: (PascalCase)")
 	}
 
 	verifyFiles(t, root, true, false)
