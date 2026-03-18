@@ -111,13 +111,20 @@ func createExtensionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new KubeSphere extension",
-		Long:  "Create a new extension. Interactive mode prompts for type (standard/app/simple). Use --type=standard|app|simple with --from=<chart> for app/simple to skip prompts.",
-		Args:  cobra.ExactArgs(0),
+		Long: `Create a new extension, or add missing capabilities to an existing one.
+
+When run in a directory that already contains extension.yaml (standard-mode extension),
+create detects it and offers to add missing frontend or backend capabilities.
+
+Otherwise, interactive mode prompts for:
+  - From scratch (Standard/Frontend-only/Backend-only) or from existing Helm chart
+  - For app/simple: use --type with --from=<chart> to skip prompts`,
+		Args: cobra.ExactArgs(0),
 		RunE:  o.run,
 	}
 	cmd.Flags().StringVar(&o.from, "from", "", "application helm chart file path of application class")
 	cmd.Flags().StringVar(&o.typ, "type", "standard", "extension type: standard (default), app, or simple. app/simple require --from")
-	cmd.Flags().BoolVar(&o.extend, "extend", false, "force extend mode; fail if no extension.yaml in current dir")
+	cmd.Flags().BoolVar(&o.extend, "extend", false, "force extend mode (add frontend/backend to existing extension); fails if no extension.yaml in current dir")
 
 	return cmd
 }
