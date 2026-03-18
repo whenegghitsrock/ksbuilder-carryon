@@ -110,37 +110,9 @@ func ExtendAddBackend(root string) error {
 		HasBackend  bool
 	}{Name: name, HasFrontend: true, HasBackend: true}
 
-	// 1. Append backend dependency to extension.yaml
-	hasBackendDep := false
-	for _, d := range metadata.Dependencies {
-		if d.Name == "backend" {
-			hasBackendDep = true
-			break
-		}
-	}
-	if !hasBackendDep {
-		extPath := filepath.Join(root, "extension.yaml")
-		data, err := os.ReadFile(extPath)
-		if err != nil {
-			return err
-		}
-		var raw map[string]interface{}
-		if err := yaml.Unmarshal(data, &raw); err != nil {
-			return err
-		}
-		deps := []map[string]interface{}{
-			{"name": "frontend", "tags": []string{"extension"}},
-			{"name": "backend", "tags": []string{"agent"}},
-		}
-		delete(raw, "Dependencies") // avoid duplicate when original used PascalCase
-		raw["dependencies"] = deps
-		out, err := yaml.Marshal(raw)
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(extPath, out, 0644); err != nil {
-			return err
-		}
+	// 1. Ensure extension.yaml has both frontend and backend deps
+	if err := extendEnsureBothDeps(root); err != nil {
+		return err
 	}
 
 	// 2. Update values.yaml backend section
