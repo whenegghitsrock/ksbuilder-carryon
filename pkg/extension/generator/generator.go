@@ -127,6 +127,56 @@ func ExtensionYAML(s *spec.Spec) ([]byte, error) {
 	return yaml.Marshal(m)
 }
 
+// ExtensionYAMLForChartMode generates extension.yaml for app and simple modes (from existing helm chart).
+// Uses fixed maintainer "demoauthor", fixed category "ai-machine-learning", no dependencies.
+func ExtensionYAMLForChartMode(name string) ([]byte, error) {
+	displayName := map[string]string{"zh": name, "en": name}
+	desc := map[string]string{
+		"zh": "这是一个示例扩展组件，这是它的描述",
+		"en": "This is a sample extension, and this is its description",
+	}
+	type extMeta struct {
+		APIVersion       string                 `json:"apiVersion"`
+		Name             string                 `json:"name"`
+		Version          string                 `json:"version"`
+		DisplayName      map[string]string      `json:"displayName"`
+		Description      map[string]string      `json:"description"`
+		Category         string                 `json:"category"`
+		Keywords         []string               `json:"keywords"`
+		Home             string                 `json:"home"`
+		Sources          []string               `json:"sources"`
+		KubeVersion      string                 `json:"kubeVersion"`
+		KSVersion        string                 `json:"ksVersion"`
+		Maintainers      []*chart.Maintainer    `json:"maintainers"`
+		Provider         map[string]interface{} `json:"provider"`
+		Icon             string                 `json:"icon"`
+		Screenshots      []string               `json:"screenshots"`
+		InstallationMode string                 `json:"installationMode"`
+	}
+	m := extMeta{
+		APIVersion:       "kubesphere.io/v1alpha1",
+		Name:             name,
+		Version:          "0.1.0",
+		DisplayName:      displayName,
+		Description:      desc,
+		Category:         "ai-machine-learning",
+		Keywords:         []string{name, "ai-machine-learning"},
+		Home:             "https://kubesphere.io",
+		Sources:          []string{"https://github.com/kubesphere"},
+		KubeVersion:      ">=1.19.0-0",
+		KSVersion:        ">=4.0.0-0",
+		Icon:             "./static/favicon.svg",
+		Screenshots:      []string{"./static/screenshots/screenshot.png"},
+		Maintainers:      []*chart.Maintainer{{Name: "demoauthor", Email: "", URL: ""}},
+		Provider: map[string]interface{}{
+			"zh": map[string]string{"name": "demoauthor", "email": "", "url": ""},
+			"en": map[string]string{"name": "demoauthor", "email": "", "url": ""},
+		},
+		InstallationMode: "HostOnly",
+	}
+	return yaml.Marshal(m)
+}
+
 // PermissionsYAML generates permissions.yaml from spec.
 func PermissionsYAML(s *spec.Spec) ([]byte, error) {
 	switch s.Permissions {
