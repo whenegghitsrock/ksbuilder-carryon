@@ -96,6 +96,41 @@ func extendEnsureBothDeps(root string) error {
 	return os.WriteFile(extPath, out, 0644)
 }
 
+// extendSetValuesSection enables a section (frontend or backend) in values.yaml.
+// repoSuffix is e.g. "-frontend" or "-api" for the image repository.
+func extendSetValuesSection(root, section, repoSuffix, name string) error {
+	valsPath := filepath.Join(root, "values.yaml")
+	valsData, err := os.ReadFile(valsPath)
+	if err != nil {
+		return err
+	}
+	var vals map[string]interface{}
+	if err := yaml.Unmarshal(valsData, &vals); err != nil {
+		return err
+	}
+	repo := "kubespheredev/" + name + repoSuffix
+	if sec, ok := vals[section].(map[string]interface{}); ok {
+		sec["enabled"] = true
+		if img, ok := sec["image"].(map[string]interface{}); ok {
+			img["repository"] = repo
+			img["tag"] = "latest"
+		}
+	} else {
+		vals[section] = map[string]interface{}{
+			"enabled": true,
+			"image": map[string]interface{}{
+				"repository": repo,
+				"tag":        "latest",
+			},
+		}
+	}
+	valsOut, err := yaml.Marshal(vals)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(valsPath, valsOut, 0644)
+}
+
 // ExtendAddBackend adds backend capability to an existing frontend-only extension.
 // root must contain extension.yaml, values.yaml, charts/frontend.
 func ExtendAddBackend(root string) error {
