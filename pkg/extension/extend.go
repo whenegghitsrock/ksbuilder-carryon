@@ -151,35 +151,7 @@ func ExtendAddBackend(root string) error {
 	}
 
 	// 2. Update values.yaml backend section
-	valsPath := filepath.Join(root, "values.yaml")
-	valsData, err := os.ReadFile(valsPath)
-	if err != nil {
-		return err
-	}
-	var vals map[string]interface{}
-	if err := yaml.Unmarshal(valsData, &vals); err != nil {
-		return err
-	}
-	if be, ok := vals["backend"].(map[string]interface{}); ok {
-		be["enabled"] = true
-		if img, ok := be["image"].(map[string]interface{}); ok {
-			img["repository"] = "kubespheredev/" + name + "-api"
-			img["tag"] = "latest"
-		}
-	} else {
-		vals["backend"] = map[string]interface{}{
-			"enabled": true,
-			"image": map[string]interface{}{
-				"repository": "kubespheredev/" + name + "-api",
-				"tag":        "latest",
-			},
-		}
-	}
-	valsOut, err := yaml.Marshal(vals)
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(valsPath, valsOut, 0644); err != nil {
+	if err := extendSetValuesSection(root, "backend", "-api", name); err != nil {
 		return err
 	}
 
