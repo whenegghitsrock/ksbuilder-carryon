@@ -199,35 +199,7 @@ func ExtendAddFrontend(root string) error {
 	}
 
 	// 2. Update values.yaml frontend section
-	valsPath := filepath.Join(root, "values.yaml")
-	valsData, err := os.ReadFile(valsPath)
-	if err != nil {
-		return err
-	}
-	var vals map[string]interface{}
-	if err := yaml.Unmarshal(valsData, &vals); err != nil {
-		return err
-	}
-	if fe, ok := vals["frontend"].(map[string]interface{}); ok {
-		fe["enabled"] = true
-		if img, ok := fe["image"].(map[string]interface{}); ok {
-			img["repository"] = "kubespheredev/" + name + "-frontend"
-			img["tag"] = "latest"
-		}
-	} else {
-		vals["frontend"] = map[string]interface{}{
-			"enabled": true,
-			"image": map[string]interface{}{
-				"repository": "kubespheredev/" + name + "-frontend",
-				"tag":        "latest",
-			},
-		}
-	}
-	valsOut, err := yaml.Marshal(vals)
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(valsPath, valsOut, 0644); err != nil {
+	if err := extendSetValuesSection(root, "frontend", "-frontend", name); err != nil {
 		return err
 	}
 
