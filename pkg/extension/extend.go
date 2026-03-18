@@ -50,6 +50,52 @@ func InferCapabilities(dir string) (*CurrentCapabilities, error) {
 	return cap, nil
 }
 
+// extendEnsureBothDeps ensures extension.yaml has both frontend and backend dependencies.
+// No-op if both already present. Caller must have at least one of frontend/backend in deps.
+func extendEnsureBothDeps(root string) error {
+	extPath := filepath.Join(root, "extension.yaml")
+	data, err := os.ReadFile(extPath)
+	if err != nil {
+		return err
+	}
+	var raw map[string]interface{}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	// Check if both deps present (handle dependencies or Dependencies key)
+	var deps []interface{}
+	if v, ok := raw["dependencies"]; ok {
+		deps, _ = v.([]interface{})
+	}
+	if v, ok := raw["Dependencies"]; ok {
+		deps, _ = v.([]interface{})
+	}
+	hasFrontend, hasBackend := false, false
+	for _, d := range deps {
+		m, _ := d.(map[string]interface{})
+		if n, _ := m["name"].(string); n == "frontend" {
+			hasFrontend = true
+		}
+		if n, _ := m["name"].(string); n == "backend" {
+			hasBackend = true
+		}
+	}
+	if hasFrontend && hasBackend {
+		return nil
+	}
+	newDeps := []map[string]interface{}{
+		{"name": "frontend", "tags": []string{"extension"}},
+		{"name": "backend", "tags": []string{"agent"}},
+	}
+	delete(raw, "Dependencies")
+	raw["dependencies"] = newDeps
+	out, err := yaml.Marshal(raw)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(extPath, out, 0644)
+}
+
 // ExtendAddBackend adds backend capability to an existing frontend-only extension.
 // root must contain extension.yaml, values.yaml, charts/frontend.
 func ExtendAddBackend(root string) error {
