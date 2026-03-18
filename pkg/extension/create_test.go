@@ -3,6 +3,7 @@ package extension
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -203,5 +204,66 @@ func verifyPackage(t *testing.T, root string) {
 	}
 	if _, err := os.Stat(tgz); err != nil {
 		t.Fatalf("packaged tgz missing: %v", err)
+	}
+}
+
+func getTestdataPath() string {
+	_, filename, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(filename), "testdata")
+}
+
+func TestCreateApp_ExtensionYAML(t *testing.T) {
+	chartPath := filepath.Join(getTestdataPath(), "minimal-chart-0.1.0.tgz")
+	if _, err := os.Stat(chartPath); err != nil {
+		t.Skip("testdata chart fixture not found, run: cd pkg/extension/testdata && helm package minimal-chart")
+	}
+	dir := t.TempDir()
+	origWd, _ := os.Getwd()
+	defer func() { _ = os.Chdir(origWd) }()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	absChartPath, _ := filepath.Abs(chartPath)
+	if err := CreateApp(absChartPath); err != nil {
+		t.Fatalf("CreateApp: %v", err)
+	}
+	extPath := filepath.Join(dir, "minimal-chart", "extension.yaml")
+	data, err := os.ReadFile(extPath)
+	if err != nil {
+		t.Fatalf("read extension.yaml: %v", err)
+	}
+	if !strings.Contains(string(data), "name: minimal-chart") {
+		t.Error("extension.yaml should contain extension name")
+	}
+	if !strings.Contains(string(data), "demoauthor") {
+		t.Error("extension.yaml should contain demoauthor")
+	}
+}
+
+func TestCreateSimple_ExtensionYAML(t *testing.T) {
+	chartPath := filepath.Join(getTestdataPath(), "minimal-chart-0.1.0.tgz")
+	if _, err := os.Stat(chartPath); err != nil {
+		t.Skip("testdata chart fixture not found, run: cd pkg/extension/testdata && helm package minimal-chart")
+	}
+	dir := t.TempDir()
+	origWd, _ := os.Getwd()
+	defer func() { _ = os.Chdir(origWd) }()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	absChartPath, _ := filepath.Abs(chartPath)
+	if err := CreateSimple(absChartPath); err != nil {
+		t.Fatalf("CreateSimple: %v", err)
+	}
+	extPath := filepath.Join(dir, "minimal-chart", "extension.yaml")
+	data, err := os.ReadFile(extPath)
+	if err != nil {
+		t.Fatalf("read extension.yaml: %v", err)
+	}
+	if !strings.Contains(string(data), "name: minimal-chart") {
+		t.Error("extension.yaml should contain extension name")
+	}
+	if !strings.Contains(string(data), "demoauthor") {
+		t.Error("extension.yaml should contain demoauthor")
 	}
 }
