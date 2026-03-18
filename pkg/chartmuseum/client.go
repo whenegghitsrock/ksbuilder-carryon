@@ -94,7 +94,10 @@ func (c *Client) UploadChart(tgzPath string) (*UploadResult, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response body: %w", err)
+	}
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("chartmuseum returned %d: %s\nHint: check --username and --password for 401/403, or --repo URL for 404", resp.StatusCode, string(body))
 	}

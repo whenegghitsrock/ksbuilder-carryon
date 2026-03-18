@@ -132,7 +132,10 @@ Otherwise, interactive mode prompts for:
 func (o *createOptions) run(c *cobra.Command, _ []string) error {
 	// Extend mode: if extension.yaml exists in current dir, offer to add capabilities
 	// Must run before any interactive prompts so users in existing extension dirs get extend options
-	pwd, _ := os.Getwd()
+	pwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("get working directory: %w", err)
+	}
 	cap, err := extension.InferCapabilities(pwd)
 	if err != nil {
 		return fmt.Errorf("check existing extension: %w", err)
@@ -215,7 +218,7 @@ func (o *createOptions) run(c *cobra.Command, _ []string) error {
 	}
 
 	switch typ {
-	case "app":
+	case "app", "simple":
 		from := o.from
 		if from == "" {
 			fromPrompt := inputPromptContent{
@@ -224,15 +227,8 @@ func (o *createOptions) run(c *cobra.Command, _ []string) error {
 			}
 			from = promptGetInput(fromPrompt)
 		}
-		return extension.CreateApp(from)
-	case "simple":
-		from := o.from
-		if from == "" {
-			fromPrompt := inputPromptContent{
-				text:     "Chart file path (e.g. ./demo-0.1.0.tgz)",
-				errorMsg: "Chart path can't be empty",
-			}
-			from = promptGetInput(fromPrompt)
+		if typ == "app" {
+			return extension.CreateApp(from)
 		}
 		return extension.CreateSimple(from)
 	case "standard":
