@@ -161,11 +161,7 @@ func ExtendAddBackend(root string) error {
 		return err
 	}
 	name := metadata.Name
-	config := struct {
-		Name        string
-		HasFrontend bool
-		HasBackend  bool
-	}{Name: name, HasFrontend: true, HasBackend: true}
+	config := extendConfig{Name: name, HasFrontend: true, HasBackend: true}
 
 	// 1. Ensure extension.yaml has both frontend and backend deps
 	if err := extendEnsureBothDeps(root); err != nil {
@@ -186,19 +182,7 @@ func ExtendAddBackend(root string) error {
 		return err
 	}
 	// 5. Regenerate root Makefile
-	makefile, err := fs.ReadFile(Templates, "templates/Makefile")
-	if err != nil {
-		return err
-	}
-	t, err := template.New("Makefile").Delims("[[", "]]").Parse(string(makefile))
-	if err != nil {
-		return err
-	}
-	var buf bytes.Buffer
-	if err := t.Execute(&buf, config); err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(root, "Makefile"), buf.Bytes(), 0644)
+	return extendWriteMakefile(root, config)
 }
 
 // ExtendAddFrontend adds frontend capability to an existing backend-only extension.
@@ -209,11 +193,7 @@ func ExtendAddFrontend(root string) error {
 		return err
 	}
 	name := metadata.Name
-	config := struct {
-		Name        string
-		HasFrontend bool
-		HasBackend  bool
-	}{Name: name, HasFrontend: true, HasBackend: true}
+	config := extendConfig{Name: name, HasFrontend: true, HasBackend: true}
 
 	// 1. Ensure extension.yaml has both frontend and backend deps
 	if err := extendEnsureBothDeps(root); err != nil {
@@ -234,17 +214,5 @@ func ExtendAddFrontend(root string) error {
 		return err
 	}
 	// 5. Regenerate root Makefile
-	makefile, err := fs.ReadFile(Templates, "templates/Makefile")
-	if err != nil {
-		return err
-	}
-	t, err := template.New("Makefile").Delims("[[", "]]").Parse(string(makefile))
-	if err != nil {
-		return err
-	}
-	var buf bytes.Buffer
-	if err := t.Execute(&buf, config); err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(root, "Makefile"), buf.Bytes(), 0644)
+	return extendWriteMakefile(root, config)
 }
