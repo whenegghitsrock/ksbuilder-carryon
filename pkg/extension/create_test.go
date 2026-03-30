@@ -104,6 +104,35 @@ func verifyExtensionInstallationMode(t *testing.T, root, want string) {
 	}
 }
 
+// frontendHelloScaffoldRelPaths matches templates under pkg/extension/templates/frontend (Hello World layout + runtime dist).
+var frontendHelloScaffoldRelPaths = []string{
+	"frontend/Dockerfile",
+	"frontend/index.html",
+	"frontend/Makefile",
+	"frontend/README.md",
+	"frontend/package.json",
+	"frontend/package-lock.json",
+	"frontend/dist/index.js",
+	"frontend/src/App.jsx",
+	"frontend/src/iframe.jsx",
+	"frontend/src/index.js",
+	"frontend/src/routes/index.js",
+	"frontend/src/locales/index.js",
+	"frontend/src/locales/en/index.js",
+	"frontend/src/locales/en/base.json",
+	"frontend/src/locales/zh/index.js",
+	"frontend/src/locales/zh/base.json",
+}
+
+func verifyFrontendHelloScaffold(t *testing.T, root string) {
+	t.Helper()
+	for _, p := range frontendHelloScaffoldRelPaths {
+		if _, err := os.Stat(filepath.Join(root, p)); err != nil {
+			t.Errorf("missing %s: %v", p, err)
+		}
+	}
+}
+
 func TestCreateFromSpec_CopiesFrontendScaffold(t *testing.T) {
 	dir := t.TempDir()
 	root := filepath.Join(dir, "scaffold-ext")
@@ -118,12 +147,7 @@ func TestCreateFromSpec_CopiesFrontendScaffold(t *testing.T) {
 	if err := CreateFromSpec(root, s); err != nil {
 		t.Fatalf("CreateFromSpec: %v", err)
 	}
-	// Must have frontend scaffold (see follow-up commit for Hello World layout files).
-	for _, p := range []string{"frontend/Dockerfile", "frontend/index.html", "frontend/Makefile"} {
-		if _, err := os.Stat(filepath.Join(root, p)); err != nil {
-			t.Errorf("missing %s: %v", p, err)
-		}
-	}
+	verifyFrontendHelloScaffold(t, root)
 	if _, err := os.Stat(filepath.Join(root, "Makefile")); err != nil {
 		t.Errorf("missing root Makefile: %v", err)
 	}

@@ -23,3 +23,9 @@ coverage.out
 
 .envrc
 /ksbuilder
+
+# npm in embedded frontend template (never commit; breaks go:embed binary size)
+pkg/extension/templates/frontend/node_modules/
+
+# Local scratch from `ksbuilder create` in repo root
+/my-extension/

@@ -104,6 +104,7 @@ func TestExtendAddFrontend(t *testing.T) {
 	if !strings.Contains(string(extData), "installationMode: Multicluster") {
 		t.Error("after ExtendAddFrontend, installationMode should stay Multicluster (backend present)")
 	}
+	verifyFrontendHelloScaffold(t, root)
 	verifyFiles(t, root, true, true)
 	verifyPackage(t, root)
 }
