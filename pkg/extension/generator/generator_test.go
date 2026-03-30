@@ -3,7 +3,39 @@ package generator
 import (
 	"strings"
 	"testing"
+
+	"github.com/kubesphere/ksbuilder/pkg/extension/spec"
 )
+
+func TestExtensionYAMLInstallationMode(t *testing.T) {
+	frontendOnly := &spec.Spec{
+		Name: "x", Version: "0.1.0", Mode: spec.ModeStandard,
+		Capabilities: spec.Capabilities{Frontend: true, Backend: false},
+		Metadata:     spec.Metadata{Category: "c"},
+		Permissions:  spec.PermDefault,
+	}
+	out, err := ExtensionYAML(frontendOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(out), "installationMode: HostOnly") {
+		t.Errorf("frontend-only: want installationMode HostOnly, got %q", string(out))
+	}
+
+	withBackend := &spec.Spec{
+		Name: "y", Version: "0.1.0", Mode: spec.ModeStandard,
+		Capabilities: spec.Capabilities{Frontend: false, Backend: true},
+		Metadata:     spec.Metadata{Category: "c"},
+		Permissions:  spec.PermDefault,
+	}
+	out, err = ExtensionYAML(withBackend)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(out), "installationMode: Multicluster") {
+		t.Errorf("backend present: want installationMode Multicluster, got %q", string(out))
+	}
+}
 
 func TestExtensionYAMLForChartMode(t *testing.T) {
 	out, err := ExtensionYAMLForChartMode("my-app")

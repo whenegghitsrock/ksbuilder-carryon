@@ -82,6 +82,8 @@ func extendEnsureBothDeps(root string) error {
 		{"name": "backend", "tags": []string{"agent"}},
 	}
 	raw["dependencies"] = newDeps
+	// Adding backend implies agent chart → use Multicluster (extension on host, agent on selected clusters).
+	raw["installationMode"] = "Multicluster"
 	out, err := yaml.Marshal(raw)
 	if err != nil {
 		return err
@@ -107,6 +109,9 @@ func extendSetValuesSection(root, section, repoSuffix, name string) error {
 		if img, ok := sec["image"].(map[string]interface{}); ok {
 			img["repository"] = repo
 			img["tag"] = "latest"
+			if _, has := img["pullPolicy"]; !has {
+				img["pullPolicy"] = "IfNotPresent"
+			}
 		}
 	} else {
 		vals[section] = map[string]interface{}{
@@ -114,6 +119,7 @@ func extendSetValuesSection(root, section, repoSuffix, name string) error {
 			"image": map[string]interface{}{
 				"repository": repo,
 				"tag":        "latest",
+				"pullPolicy": "IfNotPresent",
 			},
 		}
 	}

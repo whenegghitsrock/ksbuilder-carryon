@@ -31,6 +31,7 @@ func TestCreateFromSpec_StandardBoth(t *testing.T) {
 		t.Fatalf("CreateFromSpec: %v", err)
 	}
 
+	verifyExtensionInstallationMode(t, root, "Multicluster")
 	verifyFiles(t, root, true, true)
 	verifyPackage(t, root)
 }
@@ -65,6 +66,7 @@ func TestCreateFromSpec_FrontendOnly(t *testing.T) {
 		t.Error("extension.yaml should not contain APIVersion: (PascalCase)")
 	}
 
+	verifyExtensionInstallationMode(t, root, "HostOnly")
 	verifyFiles(t, root, true, false)
 	verifyPackage(t, root)
 }
@@ -86,8 +88,20 @@ func TestCreateFromSpec_BackendOnly(t *testing.T) {
 		t.Fatalf("CreateFromSpec: %v", err)
 	}
 
+	verifyExtensionInstallationMode(t, root, "Multicluster")
 	verifyFiles(t, root, false, true)
 	verifyPackage(t, root)
+}
+
+func verifyExtensionInstallationMode(t *testing.T, root, want string) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(root, "extension.yaml"))
+	if err != nil {
+		t.Fatalf("read extension.yaml: %v", err)
+	}
+	if !strings.Contains(string(data), "installationMode: "+want) {
+		t.Errorf("extension.yaml installationMode want %q", want)
+	}
 }
 
 func TestCreateFromSpec_CopiesFrontendScaffold(t *testing.T) {
@@ -104,7 +118,7 @@ func TestCreateFromSpec_CopiesFrontendScaffold(t *testing.T) {
 	if err := CreateFromSpec(root, s); err != nil {
 		t.Fatalf("CreateFromSpec: %v", err)
 	}
-	// Must have frontend scaffold
+	// Must have frontend scaffold (see follow-up commit for Hello World layout files).
 	for _, p := range []string{"frontend/Dockerfile", "frontend/index.html", "frontend/Makefile"} {
 		if _, err := os.Stat(filepath.Join(root, p)); err != nil {
 			t.Errorf("missing %s: %v", p, err)

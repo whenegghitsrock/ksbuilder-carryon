@@ -1,7 +1,9 @@
 package extension
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/kubesphere/ksbuilder/pkg/extension/spec"
@@ -67,6 +69,13 @@ func TestExtendAddBackend(t *testing.T) {
 	if err := ExtendAddBackend(root); err != nil {
 		t.Fatalf("ExtendAddBackend: %v", err)
 	}
+	extData, err := os.ReadFile(filepath.Join(root, "extension.yaml"))
+	if err != nil {
+		t.Fatalf("read extension.yaml: %v", err)
+	}
+	if !strings.Contains(string(extData), "installationMode: Multicluster") {
+		t.Error("after ExtendAddBackend, installationMode should be Multicluster")
+	}
 	verifyFiles(t, root, true, true)
 	verifyPackage(t, root)
 }
@@ -87,6 +96,13 @@ func TestExtendAddFrontend(t *testing.T) {
 	}
 	if err := ExtendAddFrontend(root); err != nil {
 		t.Fatalf("ExtendAddFrontend: %v", err)
+	}
+	extData, err := os.ReadFile(filepath.Join(root, "extension.yaml"))
+	if err != nil {
+		t.Fatalf("read extension.yaml: %v", err)
+	}
+	if !strings.Contains(string(extData), "installationMode: Multicluster") {
+		t.Error("after ExtendAddFrontend, installationMode should stay Multicluster (backend present)")
 	}
 	verifyFiles(t, root, true, true)
 	verifyPackage(t, root)

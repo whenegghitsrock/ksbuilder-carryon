@@ -80,6 +80,13 @@ func ExtensionYAML(s *spec.Spec) ([]byte, error) {
 		InstallationMode string                 `json:"installationMode"`
 	}
 
+	// HostOnly: extension subcharts stay on the host cluster only.
+	// Multicluster: subcharts tagged extension deploy to host; agent subcharts can deploy to member clusters (requires backend/agent chart).
+	instMode := "HostOnly"
+	if s.HasBackend() {
+		instMode = "Multicluster"
+	}
+
 	m := extMeta{
 		APIVersion:       "kubesphere.io/v1alpha1",
 		Name:             s.Name,
@@ -95,7 +102,7 @@ func ExtensionYAML(s *spec.Spec) ([]byte, error) {
 		Icon:             "./static/favicon.svg",
 		Screenshots:      []string{"./static/screenshots/screenshot.png"},
 		Dependencies:     deps,
-		InstallationMode: "HostOnly",
+		InstallationMode: instMode,
 	}
 
 	if s.Metadata.Author != "" {
@@ -324,12 +331,14 @@ func ValuesYAML(s *spec.Spec) ([]byte, error) {
   image:
     repository: kubespheredev/{{ .Name }}-frontend
     tag: latest
+    pullPolicy: IfNotPresent
 
 backend:
   enabled: {{ .Backend }}
   image:
     repository: kubespheredev/{{ .Name }}-api
     tag: latest
+    pullPolicy: IfNotPresent
 `
 	t, err := template.New("values").Parse(tpl)
 	if err != nil {
