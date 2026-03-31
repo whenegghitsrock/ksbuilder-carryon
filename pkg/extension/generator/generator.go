@@ -83,9 +83,9 @@ func ExtensionYAML(s *spec.Spec) ([]byte, error) {
 	}
 
 	// HostOnly: extension subcharts stay on the host cluster only.
-	// Multicluster: subcharts tagged extension deploy to host; agent subcharts can deploy to member clusters (requires backend/agent chart).
+	// Multicluster: only when both frontend+backend are present.
 	instMode := "HostOnly"
-	if s.HasBackend() {
+	if s.HasFrontend() && s.HasBackend() {
 		instMode = "Multicluster"
 	}
 

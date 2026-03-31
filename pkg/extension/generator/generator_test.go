@@ -32,8 +32,8 @@ func TestExtensionYAMLInstallationMode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(out), "installationMode: Multicluster") {
-		t.Errorf("backend present: want installationMode Multicluster, got %q", string(out))
+	if !strings.Contains(string(out), "installationMode: HostOnly") {
+		t.Errorf("backend-only: want installationMode HostOnly, got %q", string(out))
 	}
 	if strings.Contains(string(out), "- agent") {
 		t.Errorf("backend-only: should not include agent tag, got %q", string(out))
@@ -48,6 +48,9 @@ func TestExtensionYAMLInstallationMode(t *testing.T) {
 	out, err = ExtensionYAML(both)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !strings.Contains(string(out), "installationMode: Multicluster") {
+		t.Errorf("frontend+backend: want installationMode Multicluster, got %q", string(out))
 	}
 	if !strings.Contains(string(out), "- agent") {
 		t.Errorf("frontend+backend: expected agent tag for backend dependency, got %q", string(out))

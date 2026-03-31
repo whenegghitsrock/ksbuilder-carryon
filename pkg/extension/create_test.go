@@ -90,7 +90,7 @@ func TestCreateFromSpec_BackendOnly(t *testing.T) {
 		t.Fatalf("CreateFromSpec: %v", err)
 	}
 
-	verifyExtensionInstallationMode(t, root, "Multicluster")
+	verifyExtensionInstallationMode(t, root, "HostOnly")
 	verifyValuesSections(t, root, false, true)
 	verifyFiles(t, root, false, true)
 	verifyPackage(t, root)
