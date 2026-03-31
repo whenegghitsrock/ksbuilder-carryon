@@ -114,6 +114,9 @@ func verifyValuesSections(t *testing.T, root string, wantFrontend, wantBackend b
 		t.Fatalf("read values.yaml: %v", err)
 	}
 	content := string(data)
+	if strings.HasPrefix(content, "\n") {
+		t.Errorf("values.yaml should not start with blank line, got: %q", content[:1])
+	}
 	hasFrontend := strings.Contains(content, "frontend:")
 	hasBackend := strings.Contains(content, "backend:")
 	if hasFrontend != wantFrontend {

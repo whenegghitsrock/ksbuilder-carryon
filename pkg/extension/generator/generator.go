@@ -333,10 +333,10 @@ frontend:
     repository: kubespheredev/{{ .Name }}-frontend
     tag: latest
     pullPolicy: IfNotPresent
-{{- end }}
+{{- end -}}
 {{- if and .Frontend .Backend }}
 {{ "" }}
-{{- end }}
+{{- end -}}
 {{- if .Backend }}
 backend:
   enabled: {{ .Backend }}
@@ -359,5 +359,6 @@ backend:
 	if err := t.Execute(&b, data); err != nil {
 		return nil, err
 	}
-	return b.Bytes(), nil
+	out := bytes.TrimLeft(b.Bytes(), "\n")
+	return out, nil
 }
