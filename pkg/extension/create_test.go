@@ -104,32 +104,43 @@ func verifyExtensionInstallationMode(t *testing.T, root, want string) {
 	}
 }
 
-// frontendHelloScaffoldRelPaths matches templates under pkg/extension/templates/frontend (Hello World layout + runtime dist).
-var frontendHelloScaffoldRelPaths = []string{
-	"frontend/Dockerfile",
-	"frontend/index.html",
-	"frontend/Makefile",
-	"frontend/README.md",
-	"frontend/package.json",
-	"frontend/package-lock.json",
-	"frontend/dist/index.js",
-	"frontend/src/App.jsx",
-	"frontend/src/iframe.jsx",
-	"frontend/src/index.js",
-	"frontend/src/routes/index.js",
-	"frontend/src/locales/index.js",
-	"frontend/src/locales/en/index.js",
-	"frontend/src/locales/en/base.json",
-	"frontend/src/locales/zh/index.js",
-	"frontend/src/locales/zh/base.json",
-}
-
-func verifyFrontendHelloScaffold(t *testing.T, root string) {
+func verifyFrontendHelloScaffold(t *testing.T, root, extName string) {
 	t.Helper()
-	for _, p := range frontendHelloScaffoldRelPaths {
+	paths := []string{
+		"frontend/package.json",
+		"frontend/yarn.lock",
+		"frontend/babel.config.js",
+		"frontend/tsconfig.json",
+		"frontend/tsconfig.base.json",
+		"frontend/configs/console.config.js",
+		"frontend/.eslintrc.js",
+		"frontend/.npmrc",
+		"frontend/Makefile",
+		"frontend/configs/extensions",
+		"frontend/extensions/" + extName + "/Dockerfile",
+		"frontend/extensions/" + extName + "/index.html",
+		"frontend/extensions/" + extName + "/Makefile",
+		"frontend/extensions/" + extName + "/README.md",
+		"frontend/extensions/" + extName + "/package.json",
+		"frontend/extensions/" + extName + "/package-lock.json",
+		"frontend/extensions/" + extName + "/src/console-shell.js",
+		"frontend/extensions/" + extName + "/src/App.jsx",
+		"frontend/extensions/" + extName + "/src/iframe.jsx",
+		"frontend/extensions/" + extName + "/src/index.js",
+		"frontend/extensions/" + extName + "/src/routes/index.js",
+		"frontend/extensions/" + extName + "/src/locales/index.js",
+		"frontend/extensions/" + extName + "/src/locales/en/index.js",
+		"frontend/extensions/" + extName + "/src/locales/en/base.json",
+		"frontend/extensions/" + extName + "/src/locales/zh/index.js",
+		"frontend/extensions/" + extName + "/src/locales/zh/base.json",
+	}
+	for _, p := range paths {
 		if _, err := os.Stat(filepath.Join(root, p)); err != nil {
 			t.Errorf("missing %s: %v", p, err)
 		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "frontend/extensions/scaffold")); err == nil {
+		t.Error("template placeholder frontend/extensions/scaffold must not appear in generated output")
 	}
 }
 
@@ -147,7 +158,7 @@ func TestCreateFromSpec_CopiesFrontendScaffold(t *testing.T) {
 	if err := CreateFromSpec(root, s); err != nil {
 		t.Fatalf("CreateFromSpec: %v", err)
 	}
-	verifyFrontendHelloScaffold(t, root)
+	verifyFrontendHelloScaffold(t, root, "scaffold-ext")
 	if _, err := os.Stat(filepath.Join(root, "Makefile")); err != nil {
 		t.Errorf("missing root Makefile: %v", err)
 	}
@@ -205,7 +216,7 @@ func verifyFiles(t *testing.T, root string, wantFrontend, wantBackend bool) {
 		if _, err := os.Stat(filepath.Join(root, "charts", "frontend", "Chart.yaml")); err != nil {
 			t.Errorf("missing charts/frontend: %v", err)
 		}
-		if _, err := os.Stat(filepath.Join(root, "frontend", "Dockerfile")); err != nil {
+		if _, err := os.Stat(filepath.Join(root, "frontend", "Makefile")); err != nil {
 			t.Errorf("missing frontend scaffold: %v", err)
 		}
 		if _, err := os.Stat(filepath.Join(root, "frontend", "templates")); err == nil {

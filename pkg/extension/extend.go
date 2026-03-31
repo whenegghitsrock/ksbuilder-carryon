@@ -208,8 +208,8 @@ func ExtendAddFrontend(root string) error {
 	if err := copySubtree(Templates, "templates/charts/frontend", filepath.Join(root, "charts", "frontend"), config); err != nil {
 		return err
 	}
-	// 4. Copy frontend scaffold (no rename needed)
-	if err := copySubtree(Templates, "templates/frontend", filepath.Join(root, "frontend"), config); err != nil {
+	// 4. Lay out frontend/ (workspace + extensions/<name>/ scaffold)
+	if err := materializeFrontendWorkspace(root, name, config); err != nil {
 		return err
 	}
 	// 5. Regenerate root Makefile

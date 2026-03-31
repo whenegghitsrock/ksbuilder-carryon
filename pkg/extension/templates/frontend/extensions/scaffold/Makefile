@@ -7,12 +7,12 @@ IMAGE ?= $(REGISTRY)/$(NAMESPACE)/$(NAME)-frontend
 
 .PHONY: build build-assets push
 
-# Image builds iframe assets inside Docker (see Dockerfile). Use build-assets for local-only output under dist/assets/.
+# Image builds shell + iframe assets inside Docker (see Dockerfile). build-assets fills dist/ locally.
 build:
 	docker build -t $(IMAGE):$(TAG) .
 
 build-assets:
-	npm install && npm run build:assets
+	npm install && npm run build:assets && npm run build:shell
 
 push:
 	docker push $(IMAGE):$(TAG)
