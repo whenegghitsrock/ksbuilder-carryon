@@ -53,10 +53,12 @@ func ExtensionYAML(s *spec.Spec) ([]byte, error) {
 		})
 	}
 	if s.HasBackend() {
-		deps = append(deps, &chart.Dependency{
-			Name: "backend",
-			Tags: []string{"agent"},
-		})
+		backendDep := &chart.Dependency{Name: "backend"}
+		// Backend-only extensions don't need the "agent" tag; keep it for mixed frontend+backend mode.
+		if s.HasFrontend() {
+			backendDep.Tags = []string{"agent"}
+		}
+		deps = append(deps, backendDep)
 	}
 
 	// sigs.k8s.io/yaml uses json tags (not yaml tags) for marshaling; use json tags for lowercase keys
