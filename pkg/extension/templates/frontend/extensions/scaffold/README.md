@@ -49,7 +49,7 @@ The **`src/`** tree (except **`iframe.jsx`**) matches the official Console exten
 - Guide (zh): [创建 Hello World 扩展组件](https://dev-guide.kubesphere.io/extension-dev-guide/zh/quickstart/hello-world-extension/)
 - Guide (en): [Hello World quickstart](https://dev-guide.kubesphere.io/extension-dev-guide/en/quickstart/hello-world-extension/)
 
-Flow: open the generated **`frontend/`** as the extensions workspace → add **`configs/extensions/**`** as in the dev guide → **`yarn dev`**.
+Flow: open the generated **`frontend/`** as the extensions workspace → follow the dev guide to add extension config under **`configs/`** when doing local Console dev → **`yarn dev`**.
 
 ## File layout (reference)
 
@@ -59,8 +59,7 @@ frontend/                          # workspace root (yarn; same role as extensio
 ├── yarn.lock
 ├── babel.config.js
 ├── configs/
-│   ├── console.config.js
-│   └── extensions/               # local dev extension configs (often empty at create time)
+│   └── console.config.js
 └── extensions/
     └── [[ .Name ]]/
         ├── README.md
@@ -84,4 +83,4 @@ frontend/                          # workspace root (yarn; same role as extensio
 - 扩展根目录下始终为 **`frontend/`**，不会改名为 **`extensions-frontend`**。
 - **`ksbuilder create`** 只带 **`src/`**（含 **`console-shell.js`**），**不包含** 预生成的 **`dist/`**（由 build / **`build:shell`** 生成 **`dist/index.js`**，由 **`build:assets`** 生成 **`dist/assets/`**）。
 - **镜像构建**：在 **`frontend/extensions/[[ .Name ]]`** 下执行 **`make build`**（或扩展根目录 **`make build-frontend`**）。
-- **Console 本地开发**：在 **`frontend/`** 下 **`yarn install`**，并按文档维护 **`configs/extensions/`**。
+- **Console 本地开发**：在 **`frontend/`** 下 **`yarn install`**，并按官方文档在需要时自行维护 **`configs/`** 下的本地配置（`ksbuilder create` 不会预建 **`configs/extensions/`**）。

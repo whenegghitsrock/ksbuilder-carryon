@@ -32,6 +32,7 @@ func TestCreateFromSpec_StandardBoth(t *testing.T) {
 	}
 
 	verifyExtensionInstallationMode(t, root, "Multicluster")
+	verifyValuesSections(t, root, true, true)
 	verifyFiles(t, root, true, true)
 	verifyPackage(t, root)
 }
@@ -67,6 +68,7 @@ func TestCreateFromSpec_FrontendOnly(t *testing.T) {
 	}
 
 	verifyExtensionInstallationMode(t, root, "HostOnly")
+	verifyValuesSections(t, root, true, false)
 	verifyFiles(t, root, true, false)
 	verifyPackage(t, root)
 }
@@ -89,6 +91,7 @@ func TestCreateFromSpec_BackendOnly(t *testing.T) {
 	}
 
 	verifyExtensionInstallationMode(t, root, "Multicluster")
+	verifyValuesSections(t, root, false, true)
 	verifyFiles(t, root, false, true)
 	verifyPackage(t, root)
 }
@@ -104,6 +107,23 @@ func verifyExtensionInstallationMode(t *testing.T, root, want string) {
 	}
 }
 
+func verifyValuesSections(t *testing.T, root string, wantFrontend, wantBackend bool) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(root, "values.yaml"))
+	if err != nil {
+		t.Fatalf("read values.yaml: %v", err)
+	}
+	content := string(data)
+	hasFrontend := strings.Contains(content, "frontend:")
+	hasBackend := strings.Contains(content, "backend:")
+	if hasFrontend != wantFrontend {
+		t.Errorf("values.yaml frontend section present=%v, want %v", hasFrontend, wantFrontend)
+	}
+	if hasBackend != wantBackend {
+		t.Errorf("values.yaml backend section present=%v, want %v", hasBackend, wantBackend)
+	}
+}
+
 func verifyFrontendHelloScaffold(t *testing.T, root, extName string) {
 	t.Helper()
 	paths := []string{
@@ -116,7 +136,6 @@ func verifyFrontendHelloScaffold(t *testing.T, root, extName string) {
 		"frontend/.eslintrc.js",
 		"frontend/.npmrc",
 		"frontend/Makefile",
-		"frontend/configs/extensions",
 		"frontend/extensions/" + extName + "/Dockerfile",
 		"frontend/extensions/" + extName + "/index.html",
 		"frontend/extensions/" + extName + "/Makefile",

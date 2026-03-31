@@ -378,9 +378,6 @@ func materializeFrontendWorkspace(root, extName string, tmplConfig any) error {
 	if err := copyFrontendWorkspace(Templates, frontendRoot, tmplConfig); err != nil {
 		return fmt.Errorf("copy frontend template: %w", err)
 	}
-	if err := os.MkdirAll(filepath.Join(frontendRoot, "configs", "extensions"), 0755); err != nil {
-		return err
-	}
 	extDir := filepath.Join(frontendRoot, "extensions", extName)
 	scaffoldSrc := frontendTemplateDir + "/" + frontendTemplateScaffoldRel
 	if err := copySubtree(Templates, scaffoldSrc, extDir, tmplConfig); err != nil {

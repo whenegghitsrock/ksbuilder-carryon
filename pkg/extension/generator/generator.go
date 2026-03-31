@@ -326,19 +326,25 @@ func ValuesYAML(s *spec.Spec) ([]byte, error) {
 	if s.Mode != spec.ModeStandard {
 		return nil, nil
 	}
-	tpl := `frontend:
+	tpl := `{{- if .Frontend }}
+frontend:
   enabled: {{ .Frontend }}
   image:
     repository: kubespheredev/{{ .Name }}-frontend
     tag: latest
     pullPolicy: IfNotPresent
-
+{{- end }}
+{{- if and .Frontend .Backend }}
+{{ "" }}
+{{- end }}
+{{- if .Backend }}
 backend:
   enabled: {{ .Backend }}
   image:
     repository: kubespheredev/{{ .Name }}-api
     tag: latest
     pullPolicy: IfNotPresent
+{{- end }}
 `
 	t, err := template.New("values").Parse(tpl)
 	if err != nil {
