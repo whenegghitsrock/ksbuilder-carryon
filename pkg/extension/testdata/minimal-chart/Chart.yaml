@@ -1,0 +1,3 @@
+apiVersion: v2
+name: minimal-chart
+version: 0.1.0

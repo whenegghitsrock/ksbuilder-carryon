@@ -22,6 +22,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/kubesphere/ksbuilder/pkg/api"
+	"github.com/kubesphere/ksbuilder/pkg/extension/generator"
+	"github.com/kubesphere/ksbuilder/pkg/extension/spec"
 )
 
 type Config struct {
@@ -45,7 +47,8 @@ type ConfigApp struct {
 	ZipName        string
 }
 
-//go:embed templates
+//go:embed templates templates/.helmignore templates/frontend
+//go:embed templates/frontend/.editorconfig templates/frontend/.eslintignore templates/frontend/.eslintrc.js templates/frontend/.gitignore templates/frontend/.npmrc templates/frontend/.prettierignore templates/frontend/.prettierrc.js
 var Templates embed.FS
 
 //go:embed templatessimple
@@ -127,7 +130,20 @@ func CreateApp(chartPath string) error {
 	}
 
 	err = Create(root, extensionConfig, Templatesapp, "templatesapp")
-	return err
+	if err != nil {
+		return err
+	}
+	if err := copySharedFromTemplates(root, extensionConfig); err != nil {
+		return fmt.Errorf("copy shared templates: %w", err)
+	}
+	extYAML, err := generator.ExtensionYAMLForChartMode(chartPack.Name())
+	if err != nil {
+		return fmt.Errorf("generate extension.yaml: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "extension.yaml"), extYAML, 0644); err != nil {
+		return err
+	}
+	return nil
 }
 
 func CreateSimple(chartPath string) error {
@@ -158,7 +174,20 @@ func CreateSimple(chartPath string) error {
 		Name: chartPack.Name(),
 	}
 	err = Create(root, extensionConfig, Templatessimple, "templatessimple")
-	return err
+	if err != nil {
+		return err
+	}
+	if err := copySharedFromTemplates(root, extensionConfig); err != nil {
+		return fmt.Errorf("copy shared templates: %w", err)
+	}
+	extYAML, err := generator.ExtensionYAMLForChartMode(chartPack.Name())
+	if err != nil {
+		return fmt.Errorf("generate extension.yaml: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "extension.yaml"), extYAML, 0644); err != nil {
+		return err
+	}
+	return nil
 }
 
 func Create(p string, config any, temp embed.FS, trimPrefix string) error {
@@ -186,6 +215,312 @@ func Create(p string, config any, temp embed.FS, trimPrefix string) error {
 		}
 		defer f.Close() // nolint
 		return t.Execute(f, config)
+	})
+}
+
+// CreateFromSpec creates an extension from a declarative spec (standard mode).
+func CreateFromSpec(root string, s *spec.Spec) error {
+	if s.Mode != spec.ModeStandard {
+		return fmt.Errorf("CreateFromSpec only supports mode=standard, got %s", s.Mode)
+	}
+	if !s.HasFrontend() && !s.HasBackend() {
+		return fmt.Errorf("at least one of frontend or backend must be enabled")
+	}
+	if err := os.MkdirAll(root, 0755); err != nil {
+		return err
+	}
+	config := struct {
+		Name        string
+		HasFrontend bool
+		HasBackend  bool
+	}{Name: s.Name, HasFrontend: s.HasFrontend(), HasBackend: s.HasBackend()}
+
+	if err := s.Write(root); err != nil {
+		return err
+	}
+	extYAML, err := generator.ExtensionYAML(s)
+	if err != nil {
+		return fmt.Errorf("generate extension.yaml: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "extension.yaml"), extYAML, 0644); err != nil {
+		return err
+	}
+	permYAML, err := generator.PermissionsYAML(s)
+	if err != nil {
+		return fmt.Errorf("generate permissions.yaml: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "permissions.yaml"), permYAML, 0644); err != nil {
+		return err
+	}
+	valsYAML, err := generator.ValuesYAML(s)
+	if err != nil {
+		return fmt.Errorf("generate values.yaml: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "values.yaml"), valsYAML, 0644); err != nil {
+		return err
+	}
+	if s.HasFrontend() {
+		if err := copySubtree(Templates, "templates/charts/frontend", filepath.Join(root, "charts", "frontend"), config); err != nil {
+			return fmt.Errorf("copy frontend chart: %w", err)
+		}
+	}
+	if s.HasBackend() {
+		if err := copySubtree(Templates, "templates/charts/backend", filepath.Join(root, "charts", "backend"), config); err != nil {
+			return fmt.Errorf("copy backend chart: %w", err)
+		}
+	}
+	if err := copySubtree(Templates, "templates/static", filepath.Join(root, "static"), config); err != nil {
+		return fmt.Errorf("copy static: %w", err)
+	}
+	if s.HasFrontend() {
+		if err := ensureFrontendWorkspace(root, config); err != nil {
+			return fmt.Errorf("prepare frontend workspace: %w", err)
+		}
+	}
+	if s.HasBackend() {
+		if err := copySubtreeWithRename(Templates, "templates/backend", filepath.Join(root, "backend"), config, map[string]string{"go.mod.tpl": "go.mod"}); err != nil {
+			return fmt.Errorf("copy backend scaffold: %w", err)
+		}
+	}
+	if s.HasFrontend() || s.HasBackend() {
+		makefile, err := fs.ReadFile(Templates, "templates/Makefile")
+		if err != nil {
+			return fmt.Errorf("read Makefile template: %w", err)
+		}
+		t, err := template.New("Makefile").Delims("[[", "]]").Parse(string(makefile))
+		if err != nil {
+			return fmt.Errorf("parse Makefile template: %w", err)
+		}
+		var buf bytes.Buffer
+		if err := t.Execute(&buf, config); err != nil {
+			return fmt.Errorf("render Makefile: %w", err)
+		}
+		if err := os.WriteFile(filepath.Join(root, "Makefile"), buf.Bytes(), 0644); err != nil {
+			return fmt.Errorf("write Makefile: %w", err)
+		}
+	}
+	for _, name := range []string{"README.md", "README_zh.md", "CHANGELOG.md", "CHANGELOG_zh.md", ".helmignore"} {
+		data, err := fs.ReadFile(Templates, "templates/"+name)
+		if err != nil {
+			continue
+		}
+		t, err := template.New(name).Delims("[[", "]]").Parse(string(data))
+		if err != nil {
+			return err
+		}
+		var buf bytes.Buffer
+		if err := t.Execute(&buf, config); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(root, name), buf.Bytes(), 0644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+const (
+	frontendTemplateDir         = "templates/frontend"
+	frontendTemplateScaffoldRel = "extensions/scaffold" // repo-only; materialized as frontend/extensions/<extName>/
+)
+
+// copyFrontendWorkspace copies templates/frontend to dest except the embedded scaffold subtree
+// (extensions/scaffold), which is materialized separately under frontend/extensions/<extName>/.
+func copyFrontendWorkspace(f embed.FS, destDir string, config any) error {
+	return fs.WalkDir(f, frontendTemplateDir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if p == frontendTemplateDir {
+			if d.IsDir() {
+				return os.MkdirAll(destDir, 0755)
+			}
+			return nil
+		}
+		rel, _ := strings.CutPrefix(p, frontendTemplateDir+"/")
+		if rel == "" {
+			return nil
+		}
+		if rel == frontendTemplateScaffoldRel || strings.HasPrefix(rel, frontendTemplateScaffoldRel+"/") {
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		dstPath := filepath.Join(destDir, rel)
+		if d.IsDir() {
+			return os.MkdirAll(dstPath, 0755)
+		}
+		data, err := fs.ReadFile(f, p)
+		if err != nil {
+			return err
+		}
+		t, err := template.New(filepath.Base(p)).Delims("[[", "]]").Parse(string(data))
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			return err
+		}
+		out, err := os.Create(dstPath)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = out.Close() }()
+		return t.Execute(out, config)
+	})
+}
+
+// materializeFrontendWorkspace writes templates/frontend under the extension's **frontend/** directory:
+// workspace files at frontend/, scaffold from templates/frontend/extensions/scaffold/ → frontend/extensions/<name>/.
+func materializeFrontendWorkspace(root, extName string, tmplConfig any) error {
+	frontendRoot := filepath.Join(root, "frontend")
+	if err := copyFrontendWorkspace(Templates, frontendRoot, tmplConfig); err != nil {
+		return fmt.Errorf("copy frontend template: %w", err)
+	}
+	extDir := filepath.Join(frontendRoot, "extensions", extName)
+	scaffoldSrc := frontendTemplateDir + "/" + frontendTemplateScaffoldRel
+	if err := copySubtree(Templates, scaffoldSrc, extDir, tmplConfig); err != nil {
+		return fmt.Errorf("copy frontend scaffold into extensions/%s: %w", extName, err)
+	}
+	wrapper := `REGISTRY ?= docker.io
+NAMESPACE ?= kubespheredev
+NAME ?= ` + extName + `
+TAG ?= latest
+TAG := $(or $(TAG),latest)
+
+.PHONY: build build-assets push
+
+build:
+	$(MAKE) -C extensions/$(NAME) build NAME=$(NAME) REGISTRY=$(REGISTRY) NAMESPACE=$(NAMESPACE) TAG=$(TAG)
+
+build-assets:
+	$(MAKE) -C extensions/$(NAME) build-assets NAME=$(NAME) REGISTRY=$(REGISTRY) NAMESPACE=$(NAMESPACE) TAG=$(TAG)
+
+push:
+	$(MAKE) -C extensions/$(NAME) push NAME=$(NAME) REGISTRY=$(REGISTRY) NAMESPACE=$(NAMESPACE) TAG=$(TAG)
+`
+	if err := os.WriteFile(filepath.Join(frontendRoot, "Makefile"), []byte(wrapper), 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ensureFrontendWorkspace(root string, config struct {
+	Name        string
+	HasFrontend bool
+	HasBackend  bool
+}) error {
+	return materializeFrontendWorkspace(root, config.Name, config)
+}
+
+// copySharedFromTemplates copies static/, README*, CHANGELOG*, .helmignore from templates to root.
+// Used by CreateApp and CreateSimple to avoid duplicating these files in templatesapp/templatessimple.
+func copySharedFromTemplates(root string, config any) error {
+	if err := copySubtree(Templates, "templates/static", filepath.Join(root, "static"), config); err != nil {
+		return err
+	}
+	for _, name := range []string{"README.md", "README_zh.md", "CHANGELOG.md", "CHANGELOG_zh.md", ".helmignore"} {
+		data, err := fs.ReadFile(Templates, "templates/"+name)
+		if err != nil {
+			continue
+		}
+		t, err := template.New(name).Delims("[[", "]]").Parse(string(data))
+		if err != nil {
+			return err
+		}
+		var buf bytes.Buffer
+		if err := t.Execute(&buf, config); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(root, name), buf.Bytes(), 0644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func copySubtree(f embed.FS, srcPrefix, destDir string, config any) error {
+	return fs.WalkDir(f, srcPrefix, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if p == srcPrefix {
+			if d.IsDir() {
+				return os.MkdirAll(destDir, 0755)
+			}
+			return nil
+		}
+		rel, _ := strings.CutPrefix(p, srcPrefix+"/")
+		if rel == "" {
+			return nil
+		}
+		dstPath := filepath.Join(destDir, rel)
+		if d.IsDir() {
+			return os.MkdirAll(dstPath, 0755)
+		}
+		data, err := fs.ReadFile(f, p)
+		if err != nil {
+			return err
+		}
+		t, err := template.New(filepath.Base(p)).Delims("[[", "]]").Parse(string(data))
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			return err
+		}
+		out, err := os.Create(dstPath)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = out.Close() }()
+		return t.Execute(out, config)
+	})
+}
+
+func copySubtreeWithRename(f embed.FS, srcPrefix, destDir string, config any, renames map[string]string) error {
+	return fs.WalkDir(f, srcPrefix, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if p == srcPrefix {
+			if d.IsDir() {
+				return os.MkdirAll(destDir, 0755)
+			}
+			return nil
+		}
+		rel, _ := strings.CutPrefix(p, srcPrefix+"/")
+		if rel == "" {
+			return nil
+		}
+		dstRel := rel
+		if renames != nil {
+			if newName, ok := renames[filepath.Base(rel)]; ok {
+				dstRel = filepath.Join(filepath.Dir(rel), newName)
+			}
+		}
+		dstPath := filepath.Join(destDir, dstRel)
+		if d.IsDir() {
+			return os.MkdirAll(dstPath, 0755)
+		}
+		data, err := fs.ReadFile(f, p)
+		if err != nil {
+			return err
+		}
+		t, err := template.New(filepath.Base(p)).Delims("[[", "]]").Parse(string(data))
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
+			return err
+		}
+		out, err := os.Create(dstPath)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = out.Close() }()
+		return t.Execute(out, config)
 	})
 }
 

@@ -27,13 +27,13 @@ func PrintTemplate(args []string, o *options.TemplateOptions, out io.Writer) err
 	o.Client.ReleaseName = name
 	cp, err := o.Client.LocateChart(chart, o.Settings)
 	if err != nil {
-		return err
+		return fmt.Errorf("extension not found at %s: %w\nHint: ensure the path points to an extension directory (with extension.yaml)", chart, err)
 	}
 
 	// set metadata
 	metadata, err := api.LoadMetadata(cp)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load extension metadata: %w\nHint: check extension.yaml format and required fields", err)
 	}
 
 	rel, err := helm.Template(args, o, cp, metadata.ToChartYaml(), out)

@@ -5,16 +5,13 @@ import (
 	"os"
 	"path"
 
-	"github.com/otiai10/copy"
 	"github.com/spf13/cobra"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/chartutil"
-	"sigs.k8s.io/yaml"
 
-	"github.com/kubesphere/ksbuilder/pkg/api"
+	"github.com/kubesphere/ksbuilder/pkg/extension"
 )
 
 type packageOptions struct {
+	skipDependencyUpdate bool
 }
 
 func defaultPackageOptions() *packageOptions {
@@ -30,6 +27,7 @@ func packageExtensionCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE:  o.packageCmd,
 	}
+	cmd.Flags().BoolVar(&o.skipDependencyUpdate, "skip-dependency-update", false, "skip running helm dependency update before packaging")
 	return cmd
 }
 
@@ -41,44 +39,11 @@ func (o *packageOptions) packageCmd(_ *cobra.Command, args []string) error {
 	}
 	fmt.Printf("package extension %s\n", args[0])
 
-	tempDir, err := os.MkdirTemp("", "chart")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tempDir) // nolint
-
-	// Configure copy to follow symlinks and copy their target content
-	opt := copy.Options{
-		OnSymlink: func(_ string) copy.SymlinkAction {
-			return copy.Deep
-		},
-	}
-	if err = copy.Copy(p, tempDir, opt); err != nil {
-		return err
-	}
-
-	metadata, err := api.LoadMetadata(p)
-	if err != nil {
-		return err
-	}
-
-	chartMetadata, err := yaml.Marshal(metadata.ToChartYaml())
-	if err != nil {
-		return err
-	}
-
-	if err = os.WriteFile(tempDir+"/Chart.yaml", chartMetadata, 0644); err != nil {
-		return err
-	}
-
-	ch, err := loader.LoadDir(tempDir)
-	if err != nil {
-		return err
-	}
-	chartFilename, err := chartutil.Save(ch, pwd)
+	chartFilename, err := extension.PackageToPath(p, pwd, o.skipDependencyUpdate)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("package saved to %s\n", chartFilename)
+	fmt.Println(packageSuccessHint())
 	return nil
 }

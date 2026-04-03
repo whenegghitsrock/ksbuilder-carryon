@@ -48,3 +48,13 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# ExtensionEntry: frontend mount point (https://dev-guide.kubesphere.io/extension-dev-guide/en/feature-customization/menu/)
+# parent: global | cluster | workspace | platformSettings | access (or cluster.xxx for submenu)
+extParent: "global"
+extName: ""    # default: Release.Name
+extTitle: ""   # default: Release.Name, use i18n key for localization
+extIcon: "cluster"
+extOrder: 0
+extDesc: ""
+extSkipAuth: true

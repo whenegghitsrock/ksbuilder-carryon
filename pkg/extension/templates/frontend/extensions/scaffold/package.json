@@ -1,0 +1,23 @@
+{
+  "name": "[[ .Name ]]",
+  "description": "KubeSphere extension frontend (Hello World-style scaffold; see README.md).",
+  "author": "ks",
+  "version": "1.0.0",
+  "homepage": "",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build:assets": "esbuild src/iframe.jsx --bundle --minify --outfile=dist/assets/bundle.js --loader:.jsx=jsx --format=iife --platform=browser",
+    "build:shell": "node -e \"require('fs').mkdirSync('dist',{recursive:true});require('fs').copyFileSync('src/console-shell.js','dist/index.js');\""
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "styled-components": "^6.1.13"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
