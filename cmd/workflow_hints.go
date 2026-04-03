@@ -16,7 +16,7 @@ func createSuccessHint(standardMode bool, hasFrontend, hasBackend bool, extName 
 		b.WriteString("  6. ksbuilder publish . --target=cluster\n")
 		if hasFrontend {
 			b.WriteString("\nFor KubeSphere Console-style frontend (React, yarn dev):\n")
-			b.WriteString("  See " + extName + "/frontend/README.md (links to dev-guide + extension-samples hello-world).\n")
+			b.WriteString("  See " + extName + "/frontend/extensions/" + extName + "/README.md (links to dev-guide + extension-samples hello-world).\n")
 			b.WriteString("  Optional: cd " + extName + " && mv frontend frontend-simple && yarn create ks-project frontend && cd frontend && yarn create:ext\n")
 			b.WriteString("  (Console project in " + extName + "/frontend/, extension in frontend/extensions/. Run yarn dev from frontend/.)\n")
 		}

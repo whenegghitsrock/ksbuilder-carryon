@@ -27,7 +27,7 @@ Directory: /path/test
 The extension charts has been created.
 ```
 
-The extension directory created looks like below:
+The extension directory created looks like below (when both frontend and backend are enabled; frontend-only or backend-only omits the other chart and the matching `values.yaml` section):
 
 ```
 .
@@ -51,13 +51,28 @@ The extension directory created looks like below:
 │       ├── templates
 │       │   ├── NOTES.txt
 │       │   ├── deployment.yaml
-│       │   ├── extensions.yaml
+│       │   ├── extensionentry.yaml
 │       │   ├── helps.tpl
+│       │   ├── jsbundle.yaml
+│       │   ├── reverseproxy.yaml
 │       │   ├── service.yaml
 │       │   └── tests
 │       │       └── test-connection.yaml
 │       └── values.yaml
 ├── extension.yaml
+├── frontend
+│   ├── package.json
+│   ├── yarn.lock
+│   ├── configs
+│   │   └── console.config.js
+│   └── extensions
+│       └── <extension-name>
+│           ├── Dockerfile
+│           ├── Makefile
+│           ├── README.md
+│           ├── package.json
+│           └── src
+│               └── ...
 ├── permissions.yaml
 ├── static
 │   ├── favicon.svg
@@ -66,15 +81,17 @@ The extension directory created looks like below:
 └── values.yaml
 ```
 
+The `frontend/` directory is a KubeSphere Console-style extensions workspace (similar to [extension-samples `extensions-frontend`](https://github.com/kubesphere/extension-samples/tree/master/extensions-frontend)). Extension UI code lives under `frontend/extensions/<extension-name>/`. See that folder’s `README.md` for build and local development (`yarn install` at `frontend/`, `make build-frontend` from the extension root, and so on).
+
 Then you can customize your extension like below:
 
-- Specify the default backend and frontend images
+- Specify the default backend and frontend images in `values.yaml`. Only the blocks for enabled capabilities are generated (for example, a frontend-only extension has no `backend:` section).
 
 ```
 frontend:
   enabled: true
   image:
-repository:  <YOUR_REPO>/<extension-name>
+    repository: <YOUR_REPO>/<extension-name>
     tag: latest
 
 backend:
@@ -83,6 +100,8 @@ backend:
     repository: <YOUR_REPO>/<extension-name>
     tag: latest
 ```
+
+- In `extension.yaml`, `installationMode` is `Multicluster` when both frontend and backend are present, and `HostOnly` for backend-only extensions.
 
 - Add `APIService` definition to the backend `extensions.yaml`
 
@@ -99,19 +118,19 @@ status:
   state: Available
 ```
 
-- Add `JSBundle` definition to the frontend `extensions.yaml`
+- The frontend chart ships `jsbundle.yaml` (and related resources) for you. A typical `JSBundle` points at the service-served bundle, for example:
 
 ```yaml
 apiVersion: extensions.kubesphere.io/v1alpha1
 kind: JSBundle
 metadata:
-  name: v1alpha1.<extension-name>.kubesphere.io
+  name: <extension-name>
 spec:
   rawFrom:
-    url: http://<extension-name>-frontend.default.svc/dist/<extension-name>-frontend/index.js
+    url: http://<extension-name>-frontend.default.svc/dist/index.js
 status:
   state: Available
-  link: /dist/<extension-name>-frontend/index.js
+  link: /dist/<extension-name>/index.js
 ```
 
 ## Publish/Unpublish your KubeSphere extension

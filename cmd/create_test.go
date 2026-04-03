@@ -57,7 +57,7 @@ func TestCreateSuccessHintStandardMode(t *testing.T) {
 	if !strings.Contains(hint, "yarn create ks-project") {
 		t.Errorf("standard mode with frontend should mention create-ks-project: %q", hint)
 	}
-	if !strings.Contains(hint, "frontend/README.md") {
+	if !strings.Contains(hint, "frontend/extensions/my-extension/README.md") {
 		t.Errorf("standard mode with frontend should point to frontend README: %q", hint)
 	}
 }
